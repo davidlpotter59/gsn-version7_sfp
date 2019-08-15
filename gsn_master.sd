@@ -1,0 +1,117 @@
+Cyberscreen System                                     Function [____________]
+Screen 1. GSN-MASTER Update Screen
+  1. Policy Number:                _________
+  2. Policy Year:                  ____
+  3. Endorsement Sequence:              ____
+  4. Location No:                       ____
+  5. Building No:                       ____
+  6. Line Of Business:                  ____
+  7. Lob Subline:                  __
+  8. Line Type:                    _
+  9. Sub Code:                          ____
+ 10. Accounting Date:              __________
+ 11. Effective Date:               __________
+ 12. Expiration Date:              __________
+ 13. Transaction Code:             _________________________
+ 14. Trans Eff Date:               __________
+ 15. Trans Exp Date:               __________
+ 16. Claims Made Policy Indicator: __
+ 17. Prior Action:                 __________
+ 18. Policy Suffix:                ______
+ 19. Retroactive Date:             __________
+ 20. Premium                       __________
+ 21. Trans Date                    __________
+%%
+Screen
+        Name = "gsn_Master" ;
+        Type = "Detail" ;
+
+        Global Unsigned Ascii Number G_POLICY_NO[9] ;
+        Global Unsigned Ascii Number G_POL_YEAR[4] ;
+        Global Unsigned Ascii Number G_END_SEQUENCE[4] ;
+        Global Unsigned Ascii Number G_PREM_NO[4] ;
+        Global Unsigned Ascii Number G_BUILD_NO[4] ;
+        Global Unsigned Ascii Number G_LINE_OF_BUSINESS[4] ;
+        Global String G_LOB_SUBLINE[2] ;
+        Global String G_LINE_TYPE[1] ;
+        Global Unsigned Ascii Number G_SUB_CODE[4] ;
+
+        Access GSN_MASTER,
+           Set GSN_MASTER:POLICY_NO = G_POLICY_NO ,
+               GSN_MASTER:POL_YEAR = G_POL_YEAR ,
+               GSN_MASTER:END_SEQUENCE = G_END_SEQUENCE ,
+               GSN_MASTER:PREM_NO = G_PREM_NO ,
+               GSN_MASTER:BUILD_NO = G_BUILD_NO ,
+               GSN_MASTER:LINE_OF_BUSINESS = G_LINE_OF_BUSINESS ,
+               GSN_MASTER:LOB_SUBLINE = G_LOB_SUBLINE ,
+               GSN_MASTER:LINE_TYPE = G_LINE_TYPE ,
+               GSN_MASTER:SUB_CODE = G_SUB_CODE ;
+
+
+        Include "STDKEYS.INC"
+
+Functions
+        Add/reuse;            /* Add a record */
+        Change;         /* Change an existing record */
+        Delete;         /* Delete an existing record */
+
+        Find ;          /* Select a record using an exact key */
+        Search;         /* Select a record using an approximate key */
+        Next;           /* Display the next record(s) in key sequence */
+        Previous;       /* Display the previous record(s) in key sequence */
+        View;           /* View the contents of freetext fields */
+
+        Page/noreturn;  /* Display a different page - no going back */
+
+"Back"  Return;         /* Back to previous screen */
+"Exit"  Return;
+        Return;
+
+"Bye"   Stop;           /* Terminate this session */
+        Stop;
+
+        Print;          /* Print the screen on the default printer */
+"Cq"    Proc "CQ";      /* Enter Cyberquery */
+"Cli"   Proc ":CLI";    /* Push to the CLI */
+
+Fields
+        FUNCTION ;
+301     GSN_MASTER:POLICY_NO                   Mandatory;
+401     GSN_MASTER:POL_YEAR                    Mandatory;
+501     GSN_MASTER:END_SEQUENCE                Mandatory;
+601     GSN_MASTER:PREM_NO                     Mandatory;
+701     GSN_MASTER:BUILD_NO                    Mandatory;
+801     GSN_MASTER:LINE_OF_BUSINESS            Mandatory;
+901     GSN_MASTER:LOB_SUBLINE                 Mandatory;
+1001    GSN_MASTER:LINE_TYPE                   Mandatory;
+1101    GSN_MASTER:SUB_CODE                    Mandatory;
+1201    GSN_MASTER:ACCOUNTING_DATE;
+1301    GSN_MASTER:POLICY_EFF_DATE;
+1401    GSN_MASTER:POLICY_EXP_DATE;
+1501    GSN_MASTER:POLICY_INDICATOR;
+1601    GSN_MASTER:TRANS_EFF_DATE;
+1701    GSN_MASTER:TRANS_EXP_DATE;
+1801    GSN_MASTER:CLAIMS_MADE_POLICY_INDICATOR;
+1901    GSN_MASTER:PRIOR_ACTION;
+2001    GSN_MASTER:POLICY_SUFFIX;
+2101    GSN_MASTER:RETROACTIVE_DATE;
+2201    GSN_MASTER:premium;
+2301    gsn_master:trans_date;
+
+Screen Exit
+        If GSN_MASTER:POLICY_NO > 0 Then G_POLICY_NO = GSN_MASTER:POLICY_NO ;
+        If GSN_MASTER:POL_YEAR > 0 Then G_POL_YEAR = GSN_MASTER:POL_YEAR ;
+        If GSN_MASTER:END_SEQUENCE > 0
+        Then G_END_SEQUENCE = GSN_MASTER:END_SEQUENCE ;
+        If GSN_MASTER:PREM_NO > 0 Then G_PREM_NO = GSN_MASTER:PREM_NO ;
+        If GSN_MASTER:BUILD_NO > 0 Then G_BUILD_NO = GSN_MASTER:BUILD_NO ;
+        If GSN_MASTER:LINE_OF_BUSINESS > 0
+        Then G_LINE_OF_BUSINESS = GSN_MASTER:LINE_OF_BUSINESS ;
+        If GSN_MASTER:LOB_SUBLINE > ""
+        Then G_LOB_SUBLINE = GSN_MASTER:LOB_SUBLINE ;
+        If GSN_MASTER:LINE_TYPE > ""
+        Then G_LINE_TYPE = GSN_MASTER:LINE_TYPE ;
+        If GSN_MASTER:SUB_CODE > 0 Then G_SUB_CODE = GSN_MASTER:SUB_CODE ;
+
+
+End

@@ -1,0 +1,102 @@
+%%
+Program
+        Name = "cppcrime1cnv"
+        Type = "File" ;
+        Domain = "cppcrime1" ;
+
+        Number COUNTER = 0;
+        String l_form_edition[25];
+        String l_found[1];
+        String l_company_id[10];
+        String l_sfs[3]="SFS";
+        Unsigned ASCII number l_line_of_business[4];
+              
+Screen Entry
+
+Update
+
+COUNTER = COUNTER + 1
+
+If COUNTER = 1 Then
+Begin
+    Write ("<014>")
+End
+
+write ("%c%s%n",01001,"Counter     = ",counter)
+
+Do UPDATE_cppcrime1
+
+Screen Exit
+
+Write ("%c%s%n",15001,"Update is Compete......",COUNTER)
+
+Procedure Definition
+
+Procedure UPDATE_cppcrime1
+{
+
+l_found = "N"
+
+access sfsdefault, set sfsdefault:sfs_code = l_sfs
+
+l_company_id = sfsdefault:company_id 
+
+-- cppcrime1 key  POLICY_NO+POL_YEAR+END_SEQUENCE+PREM_NO+BUILD_NO+SUB_CODE
+
+-- sfsoptend key COMPANY_ID+STATE+LINE_OF_BUSINESS+CODE+EFF_DATE 
+
+-- sfpmaster key POLICY_NO+POL_YEAR+END_SEQUENCE
+
+access sfpmaster, set sfpmaster:policy_no    = cppcrime1:policy_no, 
+                      sfpmaster:pol_year     = cppcrime1:pol_year, 
+                      sfpmaster:end_sequence = cppcrime1:end_sequence
+
+access sfpname,   set sfpname:policy_no      = cppcrime1:policy_no, 
+                      sfpname:pol_year       = cppcrime1:pol_year, 
+                      sfpname:end_sequence   = cppcrime1:end_sequence
+
+l_line_of_business = sfpname:line_of_business 
+
+access sfsoptend, set sfsoptend:company_id       = l_company_id, 
+                      sfsoptend:state            = sfpmaster:state,
+                      sfsoptend:line_of_business = l_line_of_business,
+                      sfsoptend:code             = cppcrime1:code, generic
+
+while sfsoptend:company_id       = l_company_id and 
+      sfsoptend:line_of_business = l_line_of_business and 
+      sfsoptend:code             = cppcrime1:code and 
+      l_found                    = "N"
+      {
+         if sfsoptend:exp_date = 00.00.0000 then
+         {
+           l_form_edition = sfsoptend:form_edition
+           l_found        = "Y"
+         }
+         next sfsoptend
+      }
+    
+access cppcrime1_alt, set cppcrime1_alt:policy_no    = cppcrime1:policy_no, 
+                       cppcrime1_alt:pol_year     = cppcrime1:pol_year,
+                       cppcrime1_alt:end_sequence = cppcrime1:end_sequence, 
+                       cppcrime1_alt:prem_no      = cppcrime1:prem_no,
+                       cppcrime1_alt:build_no     = cppcrime1:build_no,
+                       cppcrime1_alt:sub_code     = cppcrime1:sub_code 
+
+if cppcrime1_alt:policy_no    = cppcrime1:policy_no and 
+   cppcrime1_alt:pol_year     = cppcrime1:pol_year and 
+   cppcrime1_alt:end_sequence = cppcrime1:end_sequence and 
+   cppcrime1_alt:prem_no      = cppcrime1:prem_no and
+   cppcrime1_alt:build_no     = cppcrime1:build_no and 
+   cppcrime1_alt:sub_code     = cppcrime1:sub_code  then 
+{
+  change cppcrime1_alt
+  {
+     cppcrime1_alt:form_edition  = l_form_edition
+     cppcrime1_alt:expansion     = "XXXXXX"
+     write ("%c%s",05001,"I am here in change")
+  } -- end of adding record
+} -- end of record exist checking
+
+} -- end of procedure
+
+End

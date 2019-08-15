@@ -1,0 +1,194 @@
+%%                                  
+/*
+Date Written: 09/12/2011
+
+Name: sfpup007.sd
+
+Copyright (c) 2011, SCIPS.com Inc.
+
+Modify
+Date                   By                  Comment
+--------------------------------------------------------------
+09/12/2011            REL                 This program is for the interface with gsn.  i
+                                          It will collect all field that gsn needs by policy_no on a location basis.
+==============================================================
+*/
+
+Program
+  Name = "sfpup007_balance_premiums";
+  Type = "File";
+  Domain = "dummy";
+  Padcharacter = Space;
+
+  string l_company_id[10]="GGUND     ",
+         l_enter[1],
+         l_hold_lob_subline[2],
+         l_hold_line_type[1];
+
+  unsigned ascii number l_policy_no[9]=0/decimals=0,
+                        l_hold_policy_no[9]=0/decimals=0,
+                        l_hold_pol_year[4],
+                        l_hold_end_sequence[4],
+                        l_hold_prem_no[4],
+                        l_hold_build_no[4],
+                        l_hold_line_of_business[4],
+                        l_hold_sub_code[4];
+
+
+  signed ascii number l_hold_premium[9]=0.00/decimals=2,
+                      l_total_premium[9]=0.00/decimals=2,
+                      l_grand_total_gsn_premium[9]=0.00/decimals=2,
+                      l_grand_total_scips_premium[9]=0.00/decimals=2;
+
+  wdate l_starting_date,
+        l_ending_date;
+
+
+initialization
+  l_STARTING_DATE = Date(COMMANDLINE[1,8])
+  l_ENDING_DATE   = Date(COMMANDLINE[9,16])
+
+  do balance_gsn_master_to_premium_master
+
+update
+
+screen exit
+
+write ("<014>")
+write ("%c%s%n",01001,"l_grand_total_gsn_premium    = ",l_grand_total_gsn_premium)
+write ("%c%s%n",03001,"l_grand_total_scips_premium   = ",l_grand_total_scips_premium)
+
+procedure definition
+
+procedure balance_gsn_master_to_premium_master
+{
+l_policy_no = 0
+l_hold_policy_no = 0
+l_hold_premium   = 0.00
+
+access gsn_master, set gsn_master:policy_no = l_policy_no
+
+while gsn_master:errornumber = 0
+{
+    if l_hold_policy_no = 0 then -- first pass
+    {
+        l_hold_policy_no = gsn_master:policy_no
+        l_hold_premium   = 0
+    }
+
+    if l_hold_policy_no <> gsn_master:policy_no then -- control break
+    {
+       do check_premiums_to_balance
+       do update_gsn_master_file
+
+    if l_hold_lob_subline <> gsn_master:lob_subline then
+    {
+       do check_premiums_to_balance
+       do update_gsn_master_file
+       l_hold_lob_subline = gsn_master:lob_subline
+    }
+
+ write ("<014>")
+ write ("%c%s%n",01001,"GSN_MASTER_POLICY_NO      = ",gsn_master:policy_no)
+ write ("%c%s%n",03001,"L HOLD PREMIUM             = ",l_hold_premium)
+ write ("%c%s%n",05001,"L TOTAL PREMIUM            = ",l_total_premium)
+ --read (23,1,"Press Enter to Continue - line 65", l_enter,1)
+
+       l_hold_policy_no        = gsn_master:policy_no
+       l_hold_pol_year         = gsn_master:pol_year
+       l_hold_end_sequence     = gsn_master:end_sequence
+       l_hold_prem_no          = gsn_master:prem_no
+       l_hold_build_no         = gsn_master:build_no
+       l_hold_line_of_business = gsn_master:line_of_business
+       l_hold_lob_subline      = gsn_master:lob_subline
+       l_hold_line_type        = gsn_master:line_type
+       l_hold_sub_code         = gsn_master:sub_code
+       l_hold_premium          = 0
+    }
+
+/*  this logic will force the last record to be updated on the starr master file */
+       l_hold_pol_year         = gsn_master:pol_year
+       l_hold_end_sequence     = gsn_master:end_sequence
+       l_hold_prem_no          = gsn_master:prem_no
+       l_hold_build_no         = gsn_master:build_no
+       l_hold_line_of_business = gsn_master:line_of_business
+       l_hold_lob_subline      = gsn_master:lob_subline
+       l_hold_line_type        = gsn_master:line_type
+       l_hold_sub_code         = gsn_master:sub_code
+       l_hold_premium          = l_hold_premium + gsn_master:premium
+       l_grand_total_gsn_premium = l_grand_total_gsn_premium + gsn_master:premium
+
+       next gsn_master
+
+    } -- end of while
+
+} -- end of Procedure
+
+Procedure check_premiums_to_balance
+{
+
+l_total_premium = 0.00
+
+access prsmaster, set prsmaster:company_id = l_company_id,
+                      prsmaster:policy_no  = l_hold_policy_no, approximate
+
+while prsmaster:company_id  = l_company_id and
+      prsmaster:policy_no   = l_hold_policy_no
+      {
+      write ("<014>")
+      write ("%c%s%n",01001,"Prsmaster:policy_no     = ",prsmaster:policy_no)
+      write ("%c%s%d",03001,"l starting date         = ",l_starting_date)
+      write ("%c%s%d",05001,"l ending date           = ",l_ending_date)
+--      read (23,1,"Press enter - line 122 ",l_enter,1)
+
+         if ((prsmaster:trans_date => l_starting_date and
+              prsmaster:trans_date <= l_ending_date and
+              prsmaster:trans_eff  <= l_ending_date) or
+             (prsmaster:trans_eff  => l_starting_date and
+              prsmaster:trans_eff  <= l_ending_date and
+              prsmaster:trans_date <= l_ending_date)) and
+              prsmaster:lob_subline = l_hold_lob_subline and
+              prsmaster:trans_code < 17 then
+              {
+                l_total_premium = l_total_premium + prsmaster:premium
+                l_grand_total_scips_premium = l_grand_total_scips_premium + prsmaster:premium
+              }
+       next prsmaster
+       }
+} -- end of procedure
+
+Procedure update_gsn_master_file
+{
+
+access gsn_master_alt, set
+       gsn_master_alt:policy_no             =  l_hold_policy_no,
+       gsn_master_alt:pol_year              =  l_hold_pol_year,
+       gsn_master_alt:end_sequence          =  l_hold_end_sequence,
+       gsn_master_alt:prem_no               =  l_hold_prem_no,
+       gsn_master_alt:build_no              =  l_hold_build_no,
+       gsn_master_alt:line_of_business      =  l_hold_line_of_business,
+       gsn_master_alt:lob_subline           =  l_hold_lob_subline,
+       gsn_master_alt:line_type             =  l_hold_line_type,
+       gsn_master_alt:sub_code              =  l_hold_sub_code
+
+       if gsn_master_alt:errornumber = 0 and
+          (l_hold_premium - l_total_premium) <> 0 then -- good read
+       {
+         change gsn_master_alt
+         {
+
+ write ("<014>")
+ write ("%c%s%n",01001,"GSN_MASTER_POLICY_NO      = ",gsn_master:policy_no)
+ write ("%c%s%n",03001,"L HOLD PREMIUM             = ",l_hold_premium)
+ write ("%c%s%n",05001,"L TOTAL PREMIUM            = ",l_total_premium)
+ write ("%c%s%n",07001,"Difference                 = ",l_hold_premium - l_total_premium)
+ write ("%c%s%n",09001,"gsn_master_alt:premium - (l_hold_premium - l_total_premium) = ",gsn_master_alt:premium - (l_hold_premium - l_total_premium))
+-- read (23,1,"Press Enter to Continue - line 65", l_enter,1)
+
+            gsn_master_alt:premium = gsn_master_alt:premium - (l_hold_premium - l_total_premium)
+         }
+       }
+
+} -- end of procedure
+
+end -- end of program

@@ -1,0 +1,3 @@
+ env MAILRC=/dev/null from=scriptreply@domain smtp=smtpout.secureserver.net\
+                 smtp-auth-user=dpotter@scips.com smtp-auth-password=Kathar!na99 \
+

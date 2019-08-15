@@ -1,0 +1,3613 @@
+%%
+Screen
+        Name = "sfpmt01a" ;
+        Type = "Detail" ;
+        Padcharacter = Space ;
+        Highlight = Underscore ;
+        Screensize = "dynamic" ;
+        Windowtitle = "%a     %s Policy Processing - Ver. 7.70      %m";
+        Domain = "SFPPOINT" ;
+        iconline = 0 ;
+
+/* do not delete any globals we need these to pass to the libraries correctly */
+
+        Global String G_LIB[10] ;
+
+        Global Unsigned Ascii Number G_POLICY_NO[9] ;
+        Global Unsigned Ascii Number G_YEAR[4] ;
+        Global Unsigned Ascii Number G_END_SEQUENCE[4] ;
+        Global Unsigned Ascii Number G_QUOTE_NO[8] ;
+        Global Unsigned Ascii Number G_PREM_NO[4];
+        Global Unsigned Ascii Number G_BUILD_NO[4] ;
+        Global Unsigned Ascii Number G_NEW_QUOTE_NO[8] ;
+        Global Unsigned Ascii Number G_LINE_OF_BUSINESS[4] ;
+        Global Unsigned Ascii Number G_CANCELLATION_CODE[4] ;
+        Global Unsigned Ascii Number G_STATE[2] ;
+        Global Unsigned Ascii Number G_SUB_CODE[4] ;
+
+        Global String G_AUDIT[1] ,
+                      G_SHORT_RATE[1] ,
+                      G_RENEWAL[1] ,
+                      G_LIB1[10] ,
+                      G_REASON[75] ,
+                      g_company_lost_to[75] ;
+
+        Global Unsigned Ascii Number G_YEAR_1[4] ;
+        Global Unsigned Ascii Number G_END_SEQUENCE_1[4] ;
+        Global Unsigned Ascii Number G_END_SEQUENCE_2[4] ;
+        Global Unsigned Ascii Number G_OPT[2] ;
+        Global Unsigned Ascii Number G_AGENT_NO[4] ;
+        Global Unsigned Ascii Number G_TRANS_CODE[4] ;
+
+        Global wdate G_TRANS_EFF,
+                     G_EFF_DATE ,
+                     G_EXP_DATE ;
+
+        Global String G_LIB_1[10] ,
+                      G_DELETE_LOC[1] ,
+                      g_delete_lob[1];
+
+        Global Unsigned Ascii Number G_WORKERS_COMP_CODE[4] ,
+                                     g_policy_term[1] ;
+
+        global string g_company_id[10] ,
+                      g_copy_name[15] ;
+
+        global unsigned ascii number g_scan[1] ;
+
+        global string g_inquiry[1] ;
+        Global Unsigned Ascii Number G_opt_card[1] ;
+
+        Local Date L_TERMINATION_DATE[8] ,
+                   l_eff_date[8] ,
+                   l_terror_eff_date[8] ;
+
+        rwdate l_TU_date_recieved;
+        local signed ascii number l_trans_union_score[4];
+
+        local array[5] of string l_form_to_change_to[7],
+                                 l_form_to_look_for[7] ;
+        local unsigned ascii number l_starting_pos[3];
+         string l_path[12];
+
+
+        Local String L_SCREEN[15],
+                     l_9999_yes[1]="N",
+                     l_lob_code[10],
+                     l_str_date[8],
+                     l_9999_message[27],
+                     l_lob_end_code[1],
+                     l_color,
+                     l_stop_end[1]="N",
+                     l_REDISPLAY[1],
+                     L_RECREATE[1],
+                     l_9999_del[1]="N",
+                     l_minimum_message[100],
+                     l_continue_1[3],
+                     l_continue_2[3],
+                     l_3_continue[3],
+                     L_USER_ID[15] ,
+                     l_lib[15],
+                     L_NAME[50] ,
+                     l_company_id[10],
+                     l_code[7],
+                     l_form_edition[25],
+                     l_continue[100],
+                     l_rev_name_1[90],
+                     l_policy_convert[34],
+                     l_quote_convert[29],
+                     l_first_name_1[50],
+                     l_last_name_1[50],
+                     l_rev_name_2[90],
+                     l_csexec_application[25],
+                     l_app[3],
+                     l_first_name_2[50],
+                     l_dec[15],
+                     l_converted[1],
+                     l_cancelled[1]="N",
+                     l_last_name_2[50],
+                     l_close_quote[1]="N",
+                     l_rev_name_3[90],
+                     l_first_name_3[50],
+                     l_last_name_3[50],
+                     l_name_1[50],
+                     l_name_2[50],
+                     l_name_3[50],
+                     l_prev_quote_str[18]="Previous Quote No:",
+                     L_CHECK_RECEIVED[1] ,
+                     l_description[75] ,
+                     l_system_id[15] ;
+
+        Local Unsigned Ascii Number l_save_end_sequence[4],
+                                    l_day[2],
+                                    l_month[2],
+                                    L_NO_DAYS[3] ,
+                                    l_seq[4],
+                                    l_legacy_system_switch[1],
+                                    l_special_flag_1[3] ,
+                                    l_special_flag_2[3],
+                                    l_line_of_business[4],
+                                    l_prem_no[4],
+                                    l_build_no[4],
+                                    l_sub[1],
+                                    L_TRANS_CODE[2]=0 ,
+                                    l_use_wc_codes_on_dec[1]=0,
+                                    l_no_location[4]=0,
+                                    l_no_vehicles[4]=0,
+                                    L_DAYS[8]=0,
+                                    l_csexec_number[12],
+                                    l_diff_year[4]=0,
+                                    l_state[2]=0,
+                                    l_special_flag_3[3] ,
+                                    l_add_back[1]=0,
+                                    l_year_in[4]=0,
+                                    l_address_line_1[1],
+                                    l_trans_code_1[4],
+                                    l_address_line_2[1],
+                                    l_year[4],
+                                    l_address_line_3[1],
+                                    l_release[1],
+                                    l_sub_code[4] ,
+                                    l_abort_program[1] ,
+                                    l_policy_inquiry[1],
+                                    l_quote_inquiry[1] ;
+
+        String L_ENTER[1];
+
+        Include "csexec.var"
+
+        include "print.var"
+
+        include "virtualdecs.var"
+
+        Access sfppoint,
+           Set sfppoint:policy_NO    = g_policy_no, generic ;
+
+        Include "inqkeys.inc"
+
+Style Definition
+
+        Include "styles.inc"
+
+Functions
+
+        Include "stdfunc7a.inc"
+
+        "lib" Screenlib G_LIB ;
+        "redisplay" Display/noreturn "sfpmt01a" ;
+
+        "func99" display "" tagged reinsurance_fn ;
+        "func1" sequence "down" tagged calc_fn ;
+        "down" Continue Begin
+                        do access_scipscontrol
+                            l_continue_1 = dialog("INQUIRY ONLY","warning.bmp","Policy Inquiry Only","OK")
+                            l_screen = "sfplibi"
+                            l_policy_inquiry = 1
+                            g_inquiry = "Y"
+                            g_opt = 99
+                            FUNCTION = "LINE_OF_BUSINESS_SCREEN" -- go to rating library
+                        End ;
+
+        "func99" sequence "quoteinquiry" tagged quote_processing_fn ;
+        "quoteinquiry" continue begin
+                                do access_scipscontrol
+                                    l_screen = "sfqlibi"
+                                    l_quote_inquiry = 1
+                                    function = "LINE_OF_BUSINESS_SCREEN"
+                                end ;
+
+        "LINE_OF_BUSINESS_SCREEN" screenlib l_screen ;
+
+        "func11"        display "sfpin900" tagged NJCRIB_name_fn ;
+        "func14"        display "sfpmt005" tagged notes_fn ;
+
+        "func19"        display ""          tagged application_fn ;
+
+        "func24" sequence "end" tagged endorsement_fn ;
+        "end" continue begin
+                         do access_scipscontrol
+                         g_opt = 1
+                         g_inquiry = "N"
+                         g_audit = "N"
+                         do process_conversion
+
+                        end;
+
+        "func25" sequence "cx" tagged cancellation_fn ;
+        "cx" continue begin
+                      do access_scipscontrol
+                                 g_opt = 2
+                                 g_inquiry = "N"
+                                 g_audit = "N"
+                                 do process_conversion
+                      end ;
+
+        "func26" sequence "reins" tagged reinstatement_fn ;
+        "reins" continue begin
+                                   g_opt = 3
+                                   g_inquiry = "N"
+                                   g_audit = "N"
+                                   do process_conversion
+                         end ;
+
+        "func27" sequence "renew" tagged renewal_fn ;
+        "renew" continue begin
+                         do access_scipscontrol
+                             g_opt = 4
+                             do check_dates
+                             g_inquiry = "N"
+                             g_audit = "N"
+                             do process_conversion
+                         end ;
+
+        "func28" sequence "audit" tagged audit_fn ;
+        "audit" continue begin
+                           do access_scipscontrol
+                           if sfscompany:special_audit_process = 1 then
+                             begin
+                               g_opt = 5
+                               g_inquiry = "N"
+                               g_audit = "Y"
+                               do process_conversion
+                             end
+                           else
+                             error "You are not setup for this process"
+                         end ;
+
+        "func28" sequence "ptoq" tagged convert_policy_quote_fn ;
+        "ptoq" continue begin
+                          do access_scipscontrol
+                          g_opt = 6
+                          g_inquiry = "N"
+                          g_audit = "N"
+                          do process_conversion
+                         end ;
+
+        "func29" sequence "mtgchg" tagged mortgage_change_fn ;
+        "mtgchg" continue begin
+                            do access_scipscontrol
+                            g_opt = 7
+                            g_inquiry = "N"
+                            g_audit = "N"
+                            do process_conversion
+                          end ;
+
+        "func50" sequence "anniver" tagged anniver_change_fn ;
+        "anniver" continue begin
+                             do access_scipscontrol
+                             g_opt = 9
+                             g_inquiry = "N"
+                             g_audit = "N"
+                             do process_conversion
+                          end ;
+
+
+        "func51" sequence "payor" tagged payor_fn ;
+        "payor" continue begin
+                           do access_scipscontrol
+                           g_opt = 10
+                           g_inquiry = "N"
+                           g_audit = "N"
+                           do process_conversion
+                         end ;
+
+
+        "func30" sequence "delloc" tagged delete_location_fn ;
+        "delloc" continue begin
+                            do access_scipscontrol
+                            g_opt = 8
+                            g_audit = "N"
+                            g_inquiry = "N"
+                            do process_conversion
+                          end ;
+
+        "func31" sequence "deltrans" tagged delete_trans_fn ;
+        "deltrans" continue begin
+                            access sfppoint_alias, set sfppoint_alias:policY_no = sfppoint:policy_no,
+                                                       sfppoint_alias:pol_year  = g_year, generic
+
+                            if sfppoint_alias:converted = "N" then
+                              begin
+                              do access_scipscontrol
+                                    begin
+                                      do delete_transaction
+                                      function = "redisplay"
+                                    end
+                              end
+                            else
+                              begin
+                              error "Policy is updated already you can't delete the transaction"
+                              end
+                            end ;
+
+
+        "func32"        display "sfpmt007" tagged policy_inspect_fn ;
+        "func33"        display "sfqmt007" tagged quote_inspect_fn ;
+
+        "func34"  sequence "worksheet" tagged print_worksheet_fn ;
+        "worksheet"  continue begin
+                              g_policy_no    = sfpname:policy_no
+                              g_year         = sfpname:pol_year
+                              g_end_sequence = sfpname:end_sequence
+                        end ;
+
+        "func35"  sequence "printpolicy"   tagged print_policy_fn ;
+        "printpolicy"  continue begin
+                                access sfppoint_alias, set sfppoint_alias:policy_no = sfppoint:policy_no,
+                                                           sfppoint_alias:pol_year = g_year, generic
+
+                                if (sfpname:policy_no <> 0 and
+                                   (sfsdefault:print_converted_only = 0 or
+                                   (sfsdefault:print_converted_only = 1 and
+                                   sfppoint_alias:converted = "Y"))) then
+                                    begin
+                                    g_opt = 5
+                                    do update_sfppolicy
+                                    function = "printalldec"
+                                    end
+                                else
+                                if sfpname:policy_no = 0 then
+                                    begin
+                                    error "You must search for a policy to print"
+                                    end
+                                else
+                                if sfsdefault:print_converted_only = 1 and
+                                   sfppoint_alias:converted = "N" then
+                                    error "You need to update the policy before you can print"
+                                end ;
+        "printalldec" display "sfppr300" ;
+
+        "func36"  sequence "printselectpolicy"   tagged print_policy_selected_fn ;
+        "printselectpolicy"  continue begin
+                              access sfppoint_alias,
+                                 set sfppoint_alias:policy_no = sfppoint:policy_no,
+                                     sfppoint_alias:pol_year = g_year, generic
+
+                              if (sfpname:policy_no <> 0 and
+                                 (sfsdefault:print_converted_only = 0 or
+                                 (sfsdefault:print_converted_only = 1 and
+                                 sfppoint_alias:converted = "Y"))) then
+                                  begin
+                                  g_opt = 4
+                                  do update_sfppolicy
+                                  function = "printalldec"
+                                  end
+                              else
+                              if sfpname:policy_no = 0 then
+                                  begin
+                                  error "You must search for a policy to print"
+                                  end
+                              else
+                              if sfsdefault:print_converted_only = 1 and
+                                 sfppoint_alias:converted = "N" then
+                                  error "You need to update the policy before you can print"
+                         end ;
+
+        "func37"  sequence "printallpolicy"   tagged print_all_policy_fn ;
+        "printallpolicy"  continue begin
+                                   access sfppoint_alias, set sfppoint_alias:policy_no = sfppoint:policy_no,
+                                                              sfppoint_alias:pol_year = g_year, generic
+
+                                   if (sfpname:policy_no <> 0 and
+                                      (sfsdefault:print_converted_only = 0 or
+                                      (sfsdefault:print_converted_only = 1 and
+                                      sfppoint_alias:converted = "Y"))) then
+                                       begin
+                                       g_opt = 1
+                                       do update_sfppolicy
+                                       function = "printalldec"
+                                       end
+                                   else
+                                   if sfpname:policy_no = 0 then
+                                       begin
+                                       error "You must search for a policy to print"
+                                       end
+                                   else
+                                   if sfsdefault:print_converted_only = 1 and
+                                      sfppoint_alias:converted = "N" then
+                                       error "You need to update the policy before you can print"
+                                   end ;
+        "func38" sequence "individual_idcard" tagged print_id_card_fn;
+        "individual_idcard" continue begin
+                              if sfpname:line_of_business one of 99 or
+                                 sfsline:lob_code one of "AUTO"  then
+                                 begin
+                                 g_opt = 2
+                                 g_opt_card = 1
+                                 display screen "sfppr204"
+                                 end
+                              else
+                                 begin
+                                 g_opt = 2
+                                 g_opt_card = 1
+                                 display screen "sfppr204a"
+                                 end
+                                     end;
+        "func39" sequence "printpolicylevelid" tagged print_policy_level_id_card_fn ;
+        "func40" display "sfpmt006" tagged comments_fn ;
+        "printpolicylevelid" continue begin
+                              if sfpname:policy_no <> 0 then
+                                  begin
+                                  g_opt = 2
+                                  g_opt_card = 2
+                                  display screen "sfppr200"
+                                  end
+                              else
+                                  begin
+                                  error "You must search for a policy to print"
+                                  end
+                              end;
+        "func41" sequence "printspecificterm" tagged print_select_dec_fn ;
+        "printspecificterm" continue begin
+                              g_opt = 1
+                              display screen "sfppr200"
+                        end;
+        "func42" sequence "printqueue" tagged print_queue_fn ;
+        "printqueue" continue begin
+                                g_opt = 3
+                                display screen "sfppr202a"
+                              end;
+        "func43"  display "sfpmt01b" tagged ani_fn ;
+
+        "func44" display "plpin100" tagged palisades_credit_fn ;
+        "func45" display "sfpmt013" tagged advance_fail_fn ;
+
+        "func47" sequence "print_by_trans_date" tagged print_trans_fn ;
+        "print_by_trans_date" continue begin
+                                g_opt = 13
+                                display screen "sfppr203"
+                              end;
+
+        "func48" display "sfpmt015" tagged credit_score_fn ;
+        "func49" display "sfpmt016" tagged email_address_fn ;
+
+        "GOLIB"  screenlib l_lib ;
+        "GOSCREEN" display l_screen ;
+        "LOCSCREEN" display l_screen ;
+
+Menu Definition
+
+        Include "stdmenu7.inc"
+
+        include "sfpmenu7.inc"
+
+        include "sfputilmenu7.inc"
+
+}
+
+Toolbar Definition
+
+        Include "stdtoolbar7.inc"
+
+}
+        include "stdblanktoolbar7.inc"
+}
+
+Toolbar Tagged Main_t Properties
+                                  {
+                                      Text     = "Rate"
+                                      FontName = "SansSerif"
+                                      Fontsize = 10
+                                  }
+                        {
+                     ToolBarButton
+                                  Properties
+                                  {
+                                 Iconname   = "up.bmp"
+                                 tooltip    = "Policy Inquiry"
+                                  }
+                                  Events
+                                  {
+                                         Action    = calc_fn
+                               }
+}
+
+
+Screen Entry
+g_lib_1 = ""
+disable(add_fn)
+disable(change_fn)
+disable(delete_fn)
+
+L_USER_ID = USERNAME
+Access SFSEMAIL, Set SFSEMAIL:COMPANY_ID = SFSDEFAULT:COMPANY_ID,
+                     SFSEMAIL:USER_ID    = L_USER_ID, Generic
+
+if sfsemail:agent_no <> 0 then
+    begin
+    hide(check_panel)
+    hide(misc_panel)
+    end
+
+access sfsdefault, set sfsdefault:sfs_code = "SFS", generic
+
+access sfpcurrent, set sfpcurrent:policy_no = sfppoint:policy_no, generic
+
+access sfpname, set sfpname:policy_no    = sfpcurrent:policy_no,
+                    sfpname:pol_year     = sfpcurrent:pol_year,
+                    sfpname:end_sequence = sfpcurrent:end_sequence, generic
+
+l_company_id = sfsdefault:company_id
+
+access sfscompany,
+   set sfscompany:company_id = sfpname:company_id, generic
+
+access sfsline,
+   set sfsline:company_id       = sfpname:company_id,
+       sfsline:line_of_business = sfpname:line_of_business,
+       sfsline:lob_subline      = "00", generic
+
+raisecard(rate_panel)
+
+include "sfpin001_security.inc"
+
+if sfssecurity_rating:advance_fail <> 1 then
+    disable(advance_fail_fn)
+
+if l_company_id = "NWIC" then
+    begin
+    if sfssecurity_rating:ACCESS_TO_CONVERSIONS one of 1 then
+        {
+        enable(sfq_convert_mm)
+        }
+    else
+        {
+        disable(sfq_convert_mm)
+        }
+    end
+
+if sfssecurity_rating:access_to_underwriter_release <> 1 then
+    begin
+    hide(underwriter_panel)
+    end
+
+if sfssecurity_rating:access_anniv_record = 0 then
+    begin
+    disable(anniver_change_fn)
+    end
+
+if sfssecurity_rating:change_payor = 0 then
+    begin
+    disable(payor_fn)
+    end
+
+-- per gayle on 07/01/2019
+disable(add_fn)
+disable(change_fn)
+disable(delete_fn)
+        disable (endorsement_fn)
+        disable (cancellation_fn)
+        disable (reinstatement_fn)
+        disable (renewal_fn)
+        disable (audit_fn)
+        disable (convert_policy_quote_fn)
+        disable (delete_location_fn)
+        disable (mortgage_change_fn)
+        disable (anniver_change_fn)
+        disable (payor_fn)
+        disable (delete_trans_fn)
+
+
+Access Validation
+Skip when SFSEMAIL:AGENT_NO <> 0 And
+          sfpNAME:AGENT_NO  <> SFSEMAIL:AGENT_NO
+
+screen at 2,1 to 15, 84
+Properties
+        {
+        LayoutType = Column
+        backgroundcolor = "yellow"
+        }
+{
+Panel Tagged Header_pl
+Properties
+        {
+        Borderstyle     = Raised
+        ScrollBarPolicy = asneeded
+        }
+{
+%%
+                                                        _______________
+*------------------------------------------------------------------------------*
+| Policy No: _________  ____  ____           Quote No: ________                |
+| Name:      __________________________________________________                |
+*------------------------------------------------------------------------------*
+
+%%
+
+Components
+
+Fields
+        FUNCTION/noecho/showasguidetext;
+301     SFPPOINT:POLICY_NO/displayonly ;
+302     Begin
+          Do GET_RECENT_YEAR
+          If FUNCTION = "NEXT" Or
+             FUNCTION= "PREVIOUS" Then
+            Begin
+              G_YEAR      = SFPPOINT:POL_YEAR
+              L_CONVERTED = SFPPOINT:CONVERTED
+            End
+          do check_for_9999_record
+          if l_9999_yes = "Y" then
+            begin
+              l_9999_message = "On-Renewal Change Exists"
+              l_color = "red"
+            end
+          else
+            begin
+              l_9999_message = " "
+              l_color = "white"
+            end
+        End
+        G_YEAR/displayonly/mask="9999";
+303     Begin
+          If FUNCTION = "NEXT" Or
+             FUNCTION = "PREVIOUS" Then
+            Begin
+              G_END_SEQUENCE = SFPPOINT:END_SEQUENCE
+--              do create_credit_score(sfppoint:policy_no,g_year,g_end_sequence)  --call batch program to read credit numbers in from file.
+            End
+        End
+        G_END_SEQUENCE/displayonly;
+304     Begin
+        Access SFPNAME, Set SFPNAME:POLICY_NO  = SFPPOINT:POLICY_NO,
+                            SFPNAME:POL_YEAR = G_YEAR,
+                            SFPNAME:END_SEQUENCE  = G_END_SEQUENCE, Generic
+
+        access sfpmaster, set sfpmaster:policy_no    = sfpname_alias:policy_no,
+                              sfpmaster:pol_year     = sfpname_alias:pol_year,
+                              sfpmaster:end_sequence = sfpname_alias:end_sequence, generic
+
+        access sfsdefault, set sfsdefault:sfs_code = "SFS", generic
+
+        access sfppoint_alias, set sfppoint_alias:policy_no = sfppoint:policy_no,
+                                   sfppoint_alias:pol_year  = g_year, generic
+
+        if sfppoint_alias:converted = "N" and
+           sfppoint_alias:end_sequence = sfpname:end_sequence and
+           sfsdefault:update_delete_warning = 1 then
+            begin
+            if sfpname:company_id = "FLEMINGTON" then
+                l_continue_1 = dialog("PENDING TRANSACTION","warning.bmp","Update the policy or delete the transaction","OK")
+            else
+                l_continue_1 = dialog("PENDING TRANSACTION","warning.bmp","There is a pending transaction for this policy " + str(sfpname:policy_no) + " Press previous to see current policy in force","OK")
+            end
+
+        end
+        sfpNAME:QUOTE_NO/displayonly ;
+401     sfpNAME:NAME_KEY_1/displayonly ;
+
+} -- end of screen panel
+
+carddialog GUI at 1,1
+Properties
+        {
+        layoutconstraints = stretch
+        }
+{
+Panel  tagged date_panel
+Properties
+        {
+        scrollbarpolicy = asneeded
+        text            = "Dates"
+        }
+{
+%%
+*------------------------------------------------------------------------------*
+| Effective Date:    __________   Expiration Date:   __________                |
+| Original Eff Date: __________                                                |
+| Trans Date:        __________   Trans Eff Date:    __________                |
+*------------------------------------------------------------------------------*
+
+%%
+
+components
+
+fields
+0201    sfpNAME:EFF_DATE/displayonly ;
+0202    sfpNAME:EXP_DATE/displayonly ;
+0301    sfpNAME:ORIGINAL_EFF_DATE/displayonly ;
+0401    sfpNAME:TRANS_DATE/displayonly ;
+0402    begin
+        access sfpmaster, set sfpmaster:policy_no    = sfppoint:policy_no,
+                              sfpmaster:pol_year     = g_year,
+                              sfpmaster:end_sequence = g_end_sequence, generic
+        end
+        sfpmaster:trans_eff/displayonly ;
+
+}
+
+Panel tagged rate_panel
+Properties
+        {
+        scrollbarpolicy = asneeded
+        text            = "Rating Information"
+        }
+{
+%%
+*------------------------------------------------------------------------------*
+| Company:           ___________ _____________________________________________ |
+| Agent No:          ____  ___________________________________________________ |
+| Line of Business:  ____  _____________________________________________       |
+| Payment Plan:      ____  ____________________                                |
+| Bill Plan:          ___                                                      |
+| Package Policy:     _                                                        |
+| Updated:            _                                                        |
+*------------------------------------------------------------------------------*
+| Transaction Code:   __________________________________________               |
+| Status:             __________   Status Date:       __________               |
+| Cancellation Code:  ____  __________________________________________________ |
+| Rater:              ________________________________________________________ |
+|                                                                              |
+|                          _____________________                               |
+*------------------------------------------------------------------------------*
+
+%%
+
+components
+
+fields
+0201    sfpNAME:COMPANY_ID/displayonly ;
+0202    trun(SFSCOMPANY:NAME[1]) ;
+0301    sfpNAME:AGENT_NO/displayonly ;
+0302    SFSAGENT:NAME[1] ;
+0401    sfpNAME:LINE_OF_BUSINESS/displayonly ;
+0402    SFSLINE:DESCRIPTION ;
+0501    sfpNAME:PAYMENT_PLAN/displayonly ;
+0502    ARSPAYPLAN:DESCRIPTION ;
+0601    sfpNAME:BILL_PLAN/displayonly ;
+0701    sfpNAME:PACKAGE/checkbox/values="0,1"/displayonly
+        Hide when SFSLINE:LOB_CODE not one of "SMP", "CPORTFOLIO" ;
+0801    begin
+        access sfppoint_alias, set sfppoint_alias:policy_no = sfppoint:policy_no,
+                                   sfppoint_alias:pol_year  = g_year, generic
+
+        if sfppoint_alias:converted = "Y" then
+            disable(delete_trans_fn)
+        else
+            enable(delete_trans_fn)
+        end
+        l_converted/displayonly/checkbox/values="N,Y" ;
+1001    begin
+        l_trans_code_1 = sfpmaster:trans_code
+        access prscode, set prscode:company_id = sfpname:company_id,
+                            prscode:trans_code = l_trans_code_1, generic
+        end
+        prscode:description
+        hide if sfpmaster:amt_due_total[20] = 0 and
+                sfpmaster:audit = "N" ;
+1001    begin
+        if sfpname:status = "NONRENEWED" then
+            l_description = "NONRENEWED"
+        else
+            l_description = "NON-MONETARY CHANGE"
+        end
+        l_description/displayonly
+        hide if sfpmaster:amt_due_total[20] <> 0 or
+                sfpmaster:audit = "Y" ;
+1101    sfpname:status/displayonly ;
+1102    sfpname:status_date/displayonly ;
+1201    sfpNAME:Cancellation_CODE/displayonly
+        hide if sfpmaster:trans_code not one of 11 ;
+1202    sfscxreason:reason/displayonly
+        hide if sfpmaster:trans_code not one of 11 ;
+1301    sfpname:user_id/displayonly ;
+1501    trun(l_9999_message)/displayonly/showasguidetext/style=Java_Hyperlink_blue
+        Properties {
+                   tooltip = if l_9999_message <> "" then
+                                 "There is an On-Renewal Change on this policy"
+                      StatusBarText = if l_9999_message <> "" then
+                                          "Click Here to View Comments"
+                      cursorshape   = HAND
+                      foregroundcolor = l_color
+                  }
+                  events {
+                         mouseclicked = show_anni_notes
+                         }
+        hide when l_9999_message = " " ;
+
+
+}
+
+Panel tagged name_address_panel
+Properties
+        {
+        scrollbarpolicy = asneeded
+        text            = "Name/Address"
+        }
+{
+%%
+*------------------------------------------------------------------------------*
+| Name:              __________________________________________________        |
+|                    __________________________________________________        |
+|                    __________________________________________________        |
+| Address:           __________________________________________________        |
+|                    __________________________________________________        |
+|                    __________________________________________________        |
+| City State Zip:    ______________________________  ____  __________          |
+| Phone No:          ________________                                          |
+| Email Address:     __________________________________________________        |
+*------------------------------------------------------------------------------*
+
+%%
+
+components
+
+fields
+201     sfpNAME:NAME_KEY_1/displayonly ;
+301     sfpNAME:NAME_KEY_2/displayonly ;
+401     sfpNAME:NAME_KEY_3/displayonly ;
+501     sfpNAME:ADDRESS[1]/displayonly ;
+601     sfpNAME:ADDRESS[2]/displayonly ;
+701     sfpNAME:ADDRESS[3]/displayonly ;
+801     sfpNAME:CITY/displayonly ;
+802     sfpNAME:STR_STATE/displayonly ;
+803     sfpNAME:STR_ZIPCODE/displayonly ;
+901     sfpNAME:TELEPHONE/displayonly ;
+1001    sfpemail:email_address/displayonly ;
+
+}
+
+Panel tagged misc_panel
+Properties
+        {
+        scrollbarpolicy = asneeded
+        text            = "Misc Information"
+        }
+{
+%%
+*------------------------------------------------------------------------------*
+| Previous Policy No: _________                    [R---------------*          |
+| Manually Renew:     _                            | Renewal:   _   |          |
+| Spec Comm Rate:     _____                        | New:       _   |          |
+| TranUnion Score ___ TU Date Recieved __________  | Re-write:  _   |          |
+|                                                  *---------------R]          |
+*------------------------------------------------------------------------------*
+
+%%
+
+components
+
+fields
+0201    sfpNAME:PREVIOUS_POLICY_NO/displayonly
+        Hide when SFSLINE:LOB_CODE One Of "WORK", "CPORTFOLIO" And
+                  SFSLINE:zeros_in_policy_no = 1 ;
+0201    sfpNAME:STR_PREV_POLICY_NO/displayonly
+        Hide when SFSLINE:LOB_CODE Not One Of "WORK", "CPORTFOLIO" Or
+                  SFSLINE:zeros_in_policy_no = 0 ;
+0301    sfpNAME:MANUAL_RENEW/checkbox/values="0,1" ;
+0401    sfpNAME:SPEC_COMM_RATE/displayonly ;
+0302    sfpNAME:Policy_TYPE/values="R,N,W"/displayonly ;
+0501    --begin
+        --  do read_in_credit_score
+        --end
+        l_trans_union_score/default;
+
+0502    l_TU_date_recieved;
+}
+
+Panel tagged check_panel
+Properties
+        {
+        scrollbarpolicy = asneeded
+        text            = "Check Information"
+        }
+{
+%%
+*------------------------------------------------------------------------------*
+| Check Reference:   _______                                                   |
+*------------------------------------------------------------------------------*
+
+%%
+
+components
+
+fields
+0201    sfpNAME:CHECK_REFERENCE/displayonly ;
+
+}
+
+Panel tagged underwriter_panel
+Properties
+        {
+        scrollbarpolicy = asneeded
+        text            = "Underwriter Release"
+        }
+{
+%%
+*------------------------------------------------------------------------------*
+|                        Release:     _                                        |
+|                        Released By: _______________                          |
+*------------------------------------------------------------------------------*
+
+%%
+
+components
+
+Fields
+201     begin
+        if sfpname:released_by_underwriter <> "" then
+            l_release = 1
+        end
+        l_release/checkbox/values="0,1"/displayonly ;
+301     sfpname:released_by_underwriter/displayonly ;
+
+}
+
+} -- end card dialog
+
+} -- end
+
+Screen Exit
+G_POLICY_NO        = sfppoint:POLICY_NO ;
+G_PREM_NO          = 1 ;
+G_BUILD_NO         = 1;
+G_LINE_OF_BUSINESS = sfpNAME:line_of_business ;
+G_EFF_DATE         = sfpNAME:EFF_DATE ;
+G_EXP_DATE         = sfpNAME:EXP_DATE;
+if l_quote_inquiry = 1 then
+    begin
+--    g_year = sfppoint:pol_year
+--    g_end_sequence = sfppoint:end_sequence
+    g_lib   = ""
+    g_lib_1 = ""
+    end
+if l_policy_inquiry = 1 then
+    begin
+--    g_year = sfppoint:pol_Year
+--    g_end_sequence = sfppoint:end_sequence
+    g_lib   = "sfplib"
+    g_lib_1 = ""
+    end
+
+procedure definition
+
+procedure access_scipscontrol
+begin
+Access SFPNAME, Set SFPNAME:POLICY_NO  = SFPPOINT:POLICY_NO,
+                    SFPNAME:POL_YEAR = G_YEAR,
+                    SFPNAME:END_SEQUENCE  = G_END_SEQUENCE, Generic
+
+access sfsline, set sfsline:company_id       = sfpname:company_id,
+                    sfsline:line_of_business = sfpname:line_of_business,
+                    sfsline:lob_subline      = "00", generic
+
+access sfsagent, set sfsagent:company_id = sfpname:company_id,
+                     sfsagent:agent_no   = sfpname:agent_no, generic
+
+l_state    = sfsagent:state
+l_lob_code = sfsline:lob_code
+
+access scipscontrol,
+   set scipscontrol:company_id = sfpname:company_id,
+       scipscontrol:state      = l_state,
+       scipscontrol:lob_code   = l_lob_code, generic
+
+l_legacy_system_switch = scipscontrol:legacy_system_switch
+end
+
+/*procedure create_credit_score(number p_policy_no, number p_pol_year, number p_end_sequence)
+
+BEGIN
+  local string l_commandline[19] = str(p_policy_no,9)+" "+ str(p_pol_year,4) +" "+ str(p_end_sequence,4);
+  Proc("cli csbatch sfpup004 %s",L_commandline)/noconsole          --read sfpcreditscore and write to a file creditscore
+END
+
+
+Procedure read_in_credit_score
+
+BEGIN
+  local unsigned ascii number l_policy_no[9];
+  local unsigned ascii number l_pol_year[4];
+  local unsigned ascii number l_end_sequence[9];
+  local string l_temp[10];
+  local string l_filler[1];
+  local unsigned ascii number l_position[4];
+
+  l_trans_union_score = 0
+  l_TU_date_recieved =00.00.0000
+  l_policy_no    = 0
+  l_pol_year     = 0
+  l_end_sequence = 0
+
+  while errornumber = 0
+    {
+      l_position=seekfile("credit_score",0)
+      readfile("credit_score",l_policy_no)
+      readfile("credit_score",l_pol_year)
+      readfile("credit_score",l_end_sequence)
+      readfile("credit_score",l_trans_union_score)
+      readfile("credit_score",l_temp)
+      readfile("credit_score",l_filler)
+--      warning (l_temp)
+      l_tu_date_recieved = date(l_temp)
+--      warning ("-->" +str(l_policy_no) + str(l_tu_date_recieved) +" " + str(l_trans_union_score))
+   }
+  closefile("credit_score")
+END*/
+
+procedure check_for_9999_record
+begin
+   l_seq = 9999
+
+   access sfpname_alias, set sfpname_alias:policy_no = sfpname:policy_no,
+                             sfpname_alias:pol_year = g_year,
+                             sfpname_alias:end_sequence = l_seq, exact
+
+   if sfpname_alias:policy_no = sfpname:policy_no and
+      sfpname_alias:pol_year = g_year and
+      sfpname_alias:end_sequence = l_seq then
+          begin
+          l_9999_yes = "Y"
+          end
+   else
+      l_9999_yes = "N"
+
+end
+
+procedure show_anni_notes
+
+begin
+  if l_9999_message <> "" then
+    begin
+      g_end_sequence = 9999
+      display modal screen "sfpmt006"
+      function = "redisplay"
+    end
+end
+
+
+procedure access_sfsoptend
+
+begin
+access sfsline, set sfsline:company_id       = sfpname:company_id,
+                    sfsline:line_of_business = sfpname:line_of_business,
+                    sfsline:lob_subline      = "00", generic
+
+if sfsline:lob_code one of "CPORTFOLIO" then
+    do access_sfsoptend1
+else
+    begin
+    l_state = sfpmaster:state
+    if l_state = 0 then
+        l_state = sfplocation:state
+    if l_state = 0 then
+        l_state = sfsdefault:state
+    if sfsline:lob_code one of "HOME", "DWELLING" then
+        begin
+
+        access plppersonal, set plppersonal:policy_no    = g_policy_no,
+                                plppersonal:pol_year     = g_year,
+                                plppersonal:end_sequence = g_end_sequence, generic
+
+        l_state = plppersonal:state
+        end
+
+    if sfsline:lob_code one of "BOAT" then
+        begin
+        access pcpgeneral, set pcpgeneral:policy_no    = g_policy_no,
+                               pcpgeneral:pol_year     = g_year,
+                               pcpgeneral:end_sequence = g_end_sequence, generic
+
+        l_state = pcpgeneral:state
+        end
+
+    if sfsline:lob_code one of "SMP", "PROPERTY", "LIABILITY", "CINLAND", "FARMFIRE", "ARTISAN" then
+        l_line_of_business = 0008
+    else
+        l_line_of_business = sfpname:line_of_business
+
+    do read_sfsoptend
+    end
+
+end
+
+procedure read_sfsoptend
+begin
+access sfsoptend, set sfsoptend:company_id       = sfpname:company_id,
+                      sfsoptend:state            = l_state,
+                      sfsoptend:line_of_business = l_line_of_business,
+                      sfsoptend:code             = l_code, generic
+
+l_form_edition = ""
+l_description  = ""
+while sfsoptend:company_id       = sfpname:company_id and
+      sfsoptend:state            = l_state and
+      sfsoptend:line_of_business = l_line_of_business and
+      sfsoptend:code             = l_code
+   begin
+   if (sfpname:eff_date >= sfsoptend:eff_date and
+      (sfpname:eff_date <= sfsoptend:exp_date or
+      sfsoptend:exp_date = 0)) then
+       begin
+       l_form_edition = sfsoptend:form_edition
+       l_description  = sfsoptend:description
+       end
+
+   next sfsoptend
+   end
+
+end
+
+procedure access_sfsoptend1
+begin
+access sfpamt, set sfpamt:policy_no = g_policy_no,
+                   sfpamt:pol_year = g_year ,
+                   sfpamt:end_sequence = g_end_sequence, generic
+
+if l_lob_end_code one of "A", "P", "L", "I", "C", "B" then
+    begin
+    l_line_of_business = sfsline:rating_line_of_business
+    access sfpmaster, set sfpmaster:policy_no = g_policy_no,
+                          sfpmaster:pol_year = g_year,
+                          sfpmaster:end_sequence = g_end_sequence, generic
+
+    l_state = sfpmaster:state
+    end
+
+if l_lob_end_code one of "X" then
+    begin
+    l_line_of_business = sfpamt:line_of_business[5]
+    access bopgeneral, set bopgeneral:policy_no = g_policy_no,
+                           bopgeneral:pol_year = g_year,
+                           bopgeneral:end_sequence = g_end_sequence, generic
+
+    l_state = bopgeneral:state
+    end
+
+if l_lob_end_code one of "Z" then
+    begin
+    l_line_of_business = sfpamt:line_of_business[3]
+    access wcpgeneral, set wcpgeneral:policy_no = g_policy_no,
+                           wcpgeneral:pol_year = g_year,
+                           wcpgeneral:end_sequence = g_end_sequence, generic
+
+    l_state = wcpgeneral:state
+    end
+
+if l_lob_end_code one of "U" then
+    begin
+    l_line_of_business = sfpamt:line_of_business[4]
+    access cppumbrella, set cppumbrella:policy_no = g_policy_no,
+                            cppumbrella:pol_year = g_year,
+                            cppumbrella:end_sequence = g_end_sequence, generic
+
+    l_state = cppumbrella:state
+    end
+
+if l_lob_end_code one of "T" then
+    begin
+    l_line_of_business = sfpamt:line_of_business[1]
+    access capvehicle, set capvehicle:policy_no = g_policy_no,
+                           capvehicle:pol_year = g_year,
+                           capvehicle:end_sequence = g_end_sequence, generic
+
+    l_state = capvehicle:state
+    end
+
+if l_state = 0 then
+    l_state = sfpmaster:state
+
+do read_sfsoptend
+
+end
+
+Procedure GET_RECENT_YEAR
+Begin
+/* access alias sfppoint, because sfppoint is domain, need to get the most
+   current policy information, only do this procedure if function = "SEARCH"
+   set the globals to the last sfppoint update sfppoint also stores converted,
+   this will tell us if the last transaction was updated or not
+*/
+
+Access SFPPOINT_ALIAS, Set SFPPOINT_ALIAS:POLICY_NO = SFPPOINT:POLICY_NO, Generic
+
+G_YEAR = 0
+G_END_SEQUENCE = 0
+Repeat Begin
+    Exit If SFPPOINT_ALIAS:POLICY_NO <> SFPPOINT:POLICY_NO Or
+            FUNCTION = "NEXT" Or
+            FUNCTION = "PREVIOUS" Or
+            FUNCTION = "CHANGE" or
+            sfppoint_alias:end_sequence = 9999
+
+    G_POLICY_NO = SFPPOINT_ALIAS:POLICY_NO
+    G_YEAR = SFPPOINT_ALIAS:POL_YEAR
+    G_END_SEQUENCE = SFPPOINT_ALIAS:END_SEQUENCE
+    L_CONVERTED = SFPPOINT_ALIAS:CONVERTED
+
+Next SFPPOINT_ALIAS
+End
+
+/* end of get_recent_year */
+End
+
+procedure process_conversion
+
+begin
+G_POLICY_NO = SFPPOINT:POLICY_NO
+If G_OPT = 6 Then  -- policy to quote
+    Do POLICY_QUOTE
+Else
+If G_OPT = 7 Then -- mortgage master change
+    Begin
+    L_SCREEN = "sfpmt009"
+    FUNCTION = "GOSCREEN"
+    End
+Else
+    Begin
+
+/* if g_opt = 1 (endorsement) or g_opt = 2 (cancellation) or g_opt = 3
+       (reinstatement) or g_opt = 4 (manual renewal) then do the following */
+
+    if sfsline:lob_code not one of "WORK" then
+        begin
+        Access SFPMASTER, Set SFPMASTER:POLICY_NO    = SFPNAME:POLICY_NO,
+                              SFPMASTER:POL_YEAR     = SFPNAME:POL_YEAR,
+                              SFPMASTER:END_SEQUENCE = SFPNAME:END_SEQUENCE, Exact
+
+        if sfpmaster:policy_no <> sfpname:policy_no or
+           sfpmaster:pol_year <> sfpname:pol_year or
+           sfpmaster:end_sequence <> sfpname:end_sequence then
+            begin
+            add sfpmaster
+                begin
+                sfpmaster:policy_no    = sfpname:policy_no
+                sfpmaster:pol_year     = sfpname:pol_year
+                sfpmaster:end_Sequence = sfpname:end_sequence
+                sfpmaster:trans_eff    = sfpname:eff_date
+                sfpmaster:trans_exp    = sfpname:exp_date
+                sfpmaster:trans_code   = 14
+                end
+
+            end
+
+        L_TRANS_CODE = SFPMASTER:TRANS_CODE
+        end
+    else
+    if sfsline:lob_code one of "WORK" then
+        begin
+        Access SFPMASTER, Set SFPMASTER:POLICY_NO    = SFPNAME:POLICY_NO,
+                              SFPMASTER:POL_YEAR     = SFPNAME:POL_YEAR, generic
+
+        l_cancelled = "N"
+        while sfpmaster:policy_no = sfpname:policy_no and
+              sfpmaster:pol_Year  = sfpname:pol_year
+                begin
+                L_TRANS_CODE = SFPMASTER:TRANS_CODE
+                if l_trans_code = 11 then
+                    l_cancelled = "Y"
+                if l_trans_code = 16 then
+                    l_cancelled = "N"
+
+                next sfpmaster
+                end
+
+        Access SFPMASTER, Set SFPMASTER:POLICY_NO    = SFPNAME:POLICY_NO,
+                              SFPMASTER:POL_YEAR     = SFPNAME:POL_YEAR,
+                              SFPMASTER:END_SEQUENCE = SFPNAME:END_SEQUENCE, Exact
+
+        end
+    else
+    if sfsline:lob_code one of "LIABILITY", "ARTISAN", "SMP", "CPORTFOLIO" and
+       sfpname:company_id = "LEBINS" then
+        begin
+        Access SFPMASTER, Set SFPMASTER:POLICY_NO    = SFPNAME:POLICY_NO,
+                              SFPMASTER:POL_YEAR     = SFPNAME:POL_YEAR, generic
+
+        l_cancelled = "N"
+        while sfpmaster:policy_no = sfpname:policy_no and
+              sfpmaster:pol_Year  = sfpname:pol_year
+                begin
+                L_TRANS_CODE = SFPMASTER:TRANS_CODE
+                if l_trans_code = 11 then
+                    l_cancelled = "Y"
+                if l_trans_code = 16 then
+                    l_cancelled = "N"
+
+                next sfpmaster
+                end
+
+        Access SFPMASTER, Set SFPMASTER:POLICY_NO    = SFPNAME:POLICY_NO,
+                              SFPMASTER:POL_YEAR     = SFPNAME:POL_YEAR,
+                              SFPMASTER:END_SEQUENCE = SFPNAME:END_SEQUENCE, Exact
+
+        end
+
+/* if sfppoint:converted = "Y" and last transaction <> 11 (cancellation) and
+   g_opt = 1 (endorse) or g_opt = 2 (cancel) or g_opt = 4 (renew) or
+   last_transaction = 11 (cancellation) and g_opt = 3 (reinstate) then
+   do the following */
+
+    If L_CONVERTED = "Y" Then
+      BEGIN
+
+        If ((L_TRANS_CODE <> 11 And
+           (G_OPT = 1 Or
+           G_OPT = 2 Or
+           G_OPT = 4 Or
+           g_opt = 5 or
+           G_OPT = 8 or
+           g_opt = 10 or
+           g_opt = 9)) Or
+           (L_TRANS_CODE = 11 And
+           G_OPT = 3) or
+           (l_trans_code = 11 and
+           g_opt one of 1, 5 and
+           sfsline:lob_code one of "BOP" and
+           sfpname:company_id = "FARMERS") or
+           (sfpname:status = "NORENEWED" and
+           g_opt one of 1, 5 and
+           sfsline:lob_code one of "BOP" and
+           sfpname:company_id = "FARMERS") or
+           (l_trans_code = 11 and
+           g_opt one of 1, 5 and
+           sfsline:lob_code one of "WORK") or
+           (sfsline:lob_code one of "WORK" and
+           g_opt = 3 and
+           l_cancelled = "Y") or
+           (l_trans_code = 11 and
+           g_opt one of 1, 5 and
+           sfsline:lob_code one of "LIABILITY", "ARTISAN", "SMP", "CPORTFOLIO" and
+           sfpname:company_id = "LEBINS")) Then
+            Begin
+
+/* if g_opt = 1 (endorse) or g_opt = 2 (cancel) then display trans eff date
+   screen, you enter the effective date of the endorsement or cancellation
+   and this screen will check for valid dates entered, this screen will
+   update g_trans_eff */
+
+            access scipscontrol,
+               set scipscontrol:company_id = sfpname:company_id, generic
+
+            l_use_wc_codes_on_dec = 0
+            while scipscontrol:company_id = sfpname:company_id
+                begin
+                if scipscontrol:lob_code one of "WORK" then
+                    l_use_wc_codes_on_dec = scipscontrol:use_wc_codes_on_dec
+
+                next scipscontrol
+                end
+
+/* read sfpname to see if the end sequence 9999 record exists dont update
+   policy files display 9999 record. */
+
+             -- initialize
+             l_recreate = "Y"
+             l_redisplay = "Y"
+             l_stop_end = "N"
+             l_9999_yes = "N"
+             l_seq = 9999
+
+             access sfpname_alt, set sfpname_alt:policy_no = g_policy_no,
+                                     sfpname_alt:pol_year = g_year,
+                                     sfpname_alt:end_sequence = l_seq, exact
+
+             if sfpname_alt:policy_no = g_policy_no and
+                sfpname_alt:pol_year = g_year and
+                sfpname_alt:end_sequence = l_seq then
+                  begin
+                    l_9999_yes = "Y"
+                  end
+
+             if g_opt = 3 and
+                l_9999_yes = "Y" then
+                begin
+                  l_minimum_message = " "
+                  l_continue_1 = " "
+                  l_minimum_message = "On-Renewal Change already exist."
+                  l_continue_1 = dialog("On-Renewal Change Reminder", "warning.bmp",trun(l_minimum_message),"OK")
+                end
+
+
+             if g_opt = 9 then -- anniversary change
+                 BEGIN
+                 if l_9999_yes = "Y" then
+                    begin
+                      l_save_end_sequence = g_end_sequence
+                      l_minimum_message = " "
+                      l_continue_1 = " "
+                      l_minimum_message = "On-Renewal Change already exist. Do you want to delete it?"
+                      l_continue_1 = dialog("On-Renewal Change", "warning.bmp",trun(l_minimum_message),"Yes","No")
+                      if l_continue_1 = "Yes" then
+                         begin
+                           g_end_sequence = 9999
+                           do delete_sfp_files    -- deletes 9999 record
+                           l_9999_yes = "N"
+                           l_minimum_message = "Do you want to create a new On-Renewal Change?"
+                           l_3_continue = dialog("On-Renewal Change", "warning.bmp",trun(l_minimum_message),"Yes","No")
+                           if l_3_continue = "Yes" then
+                              begin        -- create new 9999 record
+                                l_recreate = "Y"
+                                l_redisplay = "Y"
+                              end
+                           else         -- no don't recreate 9999 record
+                              begin
+                                L_recreate = "N"
+                                l_redisplay = "N"
+                                l_9999_message = " "
+                                l_color = "white"
+                              end
+                         end
+                      else
+                        begin
+                          L_recreate = "N"
+                          l_redisplay = "Y"
+                        end
+                    g_end_sequence = l_save_end_sequence
+
+                    end                  -- yes 9999 record
+                 else                    -- no 9999 record
+                     l_recreate = "Y"
+
+                 END                     -- g_opt = 9
+
+/*  opt - 1 (endorse) and there is a 9999 record (anniversary change) give
+    message to delete the 9999 record or stop endorsement */
+
+            if G_OPT = 1 or
+               g_opt = 5 or
+               g_opt = 7 or
+               g_opt = 8 or
+               g_opt = 10 then
+               BEGIN
+               if l_9999_yes = "Y" then
+                 begin
+                   l_save_end_sequence = g_end_sequence
+                   l_minimum_message = " "
+                   l_minimum_message = "On-Renewal Change already exist.  Do you want to deleted it?"
+                   l_continue_1 = dialog("On-Renewal Change", "warning.bmp",trun(l_minimum_message),"No","Yes")
+                   if l_continue_1 = "Yes" then  -- delete yes
+                      begin
+                        g_end_sequence = 9999
+                        do delete_sfp_files
+                        l_minimum_message = " "
+                        l_minimum_message = "On-Renewal Change deleted.  Do you want to continue?"
+                        l_continue_2 = dialog("On-Renewal Change", "warning.bmp",trun(l_minimum_message),"Yes","No")
+                        if l_continue_2 = "No" then -- continue no
+                            begin
+                            l_stop_end = "Y"
+                            l_recreate = "N"
+                            l_9999_yes = "N"
+                            l_redisplay = "N"
+                            end
+                        else
+                            begin
+                            l_stop_end = "N"
+                            l_recreate = "Y"
+                            l_9999_yes = "N"
+                            end
+                      end
+                   else   -- delete = "No" back out!
+                      begin
+                      l_recreate = "N"
+                      l_stop_end = "Y"
+                      l_redisplay = "N"
+                      l_9999_yes = "N"
+                      end
+                   g_end_sequence = l_save_end_sequence
+                 end
+
+               END
+
+
+            If G_OPT = 1 Or
+               G_OPT = 2 Or
+               g_opt = 5 or
+               G_OPT = 8 or
+               g_opt = 10 Then
+                BEGIN
+                   if l_stop_end = "N" then
+                     begin
+                     Display Modal Screen "sfpmt01g" -- trans eff date screen
+                     At Line 15, Column 10
+                     With Initial Function "CHG"
+                     end
+                END
+
+            If g_opt = 9 Then
+                BEGIN
+                if L_REdisplay = "Y" then
+                   begin
+                     g_trans_eff = g_exp_date
+                     g_eff_date = g_exp_date
+                     Display Modal Screen "sfpmt01g" -- trans eff date screen
+--                     At Line 15, Column 10
+--                     With Initial Function "CHG"
+                   end
+                END
+
+            If G_OPT = 4 Then
+                Begin
+                L_DAYS = SFPNAME:EXP_DATE - SFPNAME:EFF_DATE
+                G_EFF_DATE = 0
+                G_EXP_DATE = 0
+                If L_DAYS < 360 or
+                   l_days > 370 Then
+                    Begin
+                    Display Modal Screen "sfpmt01i" -- change dates if dates are not 1 year at renewal
+                    With Initial Function "CHG"
+                    End
+                End
+
+            If G_OPT = 4 Then
+                Begin
+                G_DELETE_LOC = "N"
+                g_delete_lob = "N"
+                if sfsline:lob_code one of "PAUTO" then
+                    begin
+                    access papvehicle, set papvehicle:policy_no = g_policy_no,
+                                           papvehicle:pol_year = g_year,
+                                           papvehicle:end_sequence = g_end_sequence, generic
+
+                    l_no_vehicles = 0
+                    while papvehicle:policy_no = g_policy_no and
+                          papvehicle:pol_year = g_year and
+                          papvehicle:end_sequence = g_end_sequence
+                            begin
+                            l_no_vehicles = l_no_vehicles + 1
+
+                            next papvehicle
+                            end
+                    end
+                else
+                if sfsline:lob_code one of "AUTO" then
+                    begin
+                    access capvehicle, set capvehicle:policy_no = g_policy_no,
+                                           capvehicle:pol_year = g_year,
+                                           capvehicle:end_sequence = g_end_sequence, generic
+
+                    l_no_vehicles = 0
+                    while capvehicle:policy_no = g_policy_no and
+                          capvehicle:pol_year = g_year and
+                          capvehicle:end_sequence = g_end_sequence
+                            begin
+                            l_no_vehicles = l_no_vehicles + 1
+
+                            next capvehicle
+                            end
+                    end
+                else
+                    begin
+                    access sfplocation, set sfplocation:policy_no = g_policy_no,
+                                            sfplocation:pol_year = g_year,
+                                            sfplocation:end_sequence = g_end_sequence, generic
+
+                    l_no_location = 0
+                    while sfplocation:policy_no = g_policy_no and
+                          sfplocation:pol_year = g_year and
+                          sfplocation:end_sequence = g_end_sequence
+                            begin
+                            l_no_location = l_no_location + 1
+
+                            next sfplocation
+                            end
+                    end
+
+                if l_no_location > 1 or
+                   l_no_vehicles > 1 then
+                    begin
+                    Display Modal Screen "sfpmt01j" -- delete location at renewal
+                    With Initial Function "CHG"
+                    end
+
+                if sfpname:line_of_business one of 99 then
+                    begin
+                    display modal screen "sfpmt01l"
+                    with initial function "CHG"
+                    end
+                End
+
+/* if g_opt = 1 (endorse) display the audit screen, this screen you enter
+   Y or N to an audit endorsement, If g_audit is "Y" then prtrans:misc will
+   have the word "audit" in its field when prtrans file is updated */
+
+            If G_OPT = 1 and
+               sfscompany:special_audit_process = 0 Then
+                begin
+                  if l_stop_end = "N" then
+                     Begin
+                     Display Modal Screen "sfpmt01c" -- audit screen
+                     At Line 15, Column 10
+                     With Initial Function "CHG"
+                     End
+                end
+
+/* if g_opt = 2 (cancellation) and g_trans_eff is not equal to policy eff
+   date(g_eff_date), (which means the policy is not being cancelled flat)
+   display the short rate screen, this screen you enter Y or N, if
+   g_short_rate = "Y" then multiply the pro rata factor by the factor in the
+   file cpshort */
+
+-- Salem has codes for workers comp for endorsements, audits and reinstatements
+-- that they print on the dec page
+
+        if g_opt one of 1, 3, 5 and
+               l_use_wc_codes_on_dec = 1 and
+               sfsline:lob_code one of "WORK" then
+                begin
+                  if l_stop_end = "N" then
+                    begin
+                     g_workers_comp_code = 0
+                     display modal screen "sfpmt01k"
+                     at line 15, column 10
+                     with initial function "CHG"
+                    end
+                end
+
+            If G_OPT = 2 then
+                Begin
+                G_CANCELLATION_CODE = 0
+                G_REASON = ""
+                g_company_lost_to = ""
+                Display Modal Screen "sfpmt01h"
+                At Line 15, Column 10
+                With Initial Function "CHG"
+                End
+
+            If G_OPT = 2 And
+               G_TRANS_EFF <> G_EFF_DATE and
+               sfsline:lob_code not one of "WORK" Then
+                Begin
+                Display Modal Screen "sfpmt01d" -- short rate screen
+                At Line 15, Column 10
+                With Initial Function "CHG"
+                End
+
+/* if g_opt = 4 (renew) check agent:status, if agent is cancelled, which
+   means there is a 1 in agent:status field then compare the
+   agent:termination_date by adding 1 to the year and comparing to
+   sfpname:exp_date, if agent:termination_date greater then sfpname:exp_date
+   then display agent screen to enter a valid agent (the reason you
+   compare the termination date is the policy can be renewed 1 year after
+   the agent has been cancelled with that agent, after that they need a
+   new agent or the policy should be cancelled */
+
+            If G_OPT = 4 Then
+                Begin
+                G_AGENT_NO = SFPNAME:AGENT_NO
+                If SFSAGENT:STATUS = 1 Then  -- if agent is cancelled
+                    L_TERMINATION_DATE = Dateadd(SFSAGENT:TERMINATION_DATE,0,1)
+
+                If SFSAGENT:STATUS = 1 And
+                   SFSAGENT:NEW_AGENT_NO <> 0 And
+                   SFPNAME:EXP_DATE >= SFSAGENT:NEW_AGENT_NO_EFF_DATE Then
+                    G_AGENT_NO = SFSAGENT:NEW_AGENT_NO
+
+                If SFSAGENT:STATUS = 1 And
+                   SFPNAME:EXP_DATE >= L_TERMINATION_DATE And
+                   SFSAGENT:NEW_AGENT_NO = 0 Then
+                    Begin
+                    Display Modal Screen "sfpmt01e" -- display agent screen
+                    At Line 15, Column 10
+                    With Initial Function "CHG"
+                    End
+
+                If SFSAGENT:STATUS = 1 And
+                   SFPNAME:EXP_DATE < L_TERMINATION_DATE And
+                   SFSAGENT:NEW_AGENT_NO = 0 Then
+                    Warning "Agent is cancelled but within the first year you can still renew with this agent no"
+
+                End
+
+/* if g_opt = 1 (endorse) or g_opt = 2 (cancel) or g_opt = 3 (reinstate)
+   then g_Year_1 = g_year (does not change) but g_end_sequence_1 =
+   g_end_sequence + 1 (add 1 to this field) to update files. g_year_1
+   and g_end_sequence_1 are the globals that update the files not g_year
+   and g_end_sequence, they should not change so files can be accessed */
+
+            If G_OPT = 1 Or
+               G_OPT = 2 Or
+               G_OPT = 3 Or
+               g_opt = 5 or
+               G_OPT = 8 or
+               g_opt = 10 Then
+                Begin
+                 if l_stop_end = "N" then
+                   begin
+                    G_YEAR_1 = G_YEAR
+                    G_END_SEQUENCE_1 = G_END_SEQUENCE + 1 -- add 1 to update files
+                   end
+                End
+
+/* if g_opt = 4 (renew) then g_year_1 = g_year + 1 and g_end_sequence_1
+   = 0, set year to new year and start with endorsement sequence at
+   zero. G_year_1 and g_end_sequence_1 are the globals that update
+   the files not g_year and g_end_sequence, they should not change so files
+   can be accessed */
+
+            If G_OPT = 4 Then
+                Begin
+--                if year(sfpname:eff_date) = year(sfpname:exp_date) then
+--                    begin
+--                    g_end_sequence_1 = 0
+--                    g_year_1         = g_year + 1
+--                    g_policy_term    = sfpname:policy_term + 1
+--                    end
+--                else
+--                    begin
+--                    if sfpname:policy_term > 1 then
+--                       g_year_1 = year(sfpname:exp_date)
+--                    else
+                    G_YEAR_1 = G_YEAR + 1
+                    g_end_sequence_1 = 0
+                    g_policy_term    = 1
+--                    end
+                End
+
+            if g_opt = 5 then
+                begin
+                 if l_stop_end = "N" then
+                   begin
+                     g_audit = "Y"
+                   end
+                end
+
+/* set g_trans_code to appropriate code */
+
+            Switch(G_OPT)
+              Case 1, 8, 10 : Begin
+                              G_TRANS_CODE = 12 -- endorsement
+                              G_TRANS_EFF = G_TRANS_EFF
+                              G_SHORT_RATE = ""
+                              G_AGENT_NO = SFPNAME:AGENT_NO
+                              End
+              Case 5        : Begin
+                              G_TRANS_CODE = 15 -- endorsement
+                              G_TRANS_EFF = G_TRANS_EFF
+                              G_SHORT_RATE = ""
+                              G_AGENT_NO = SFPNAME:AGENT_NO
+                              End
+              Case 2        : Begin
+                              G_TRANS_CODE = 11 -- cancellation
+                              G_TRANS_EFF = G_TRANS_EFF
+                              G_SHORT_RATE = G_SHORT_RATE
+                              G_AGENT_NO = SFPNAME:AGENT_NO
+                              G_AUDIT = ""
+                              End
+              Case 3        : Begin
+                              G_TRANS_CODE = 16 -- reinstatement
+                              G_TRANS_EFF = SFPMASTER:TRANS_EFF
+                              G_SHORT_RATE = SFPMASTER:SHORT_RATE
+                              G_AGENT_NO = SFPNAME:AGENT_NO
+                              G_AUDIT = ""
+--                              do update_lrssetup
+                              End
+              Case 4        : Begin
+                              G_TRANS_CODE = 14 -- renewal
+                              G_SHORT_RATE = ""
+                              G_AUDIT = ""
+                              End
+              Default       : G_TRANS_CODE = 0  -- not valid
+              End
+
+/* perform update policy files procedure, to update appropriate files */
+
+
+            if l_9999_yes = "N" and
+               l_recreate = "Y" and
+               l_stop_end = "N" and
+               g_opt not one of 2, 3, 4 then
+                begin
+                Do UPDATE_POLICY_FILES
+                end
+
+            if G_OPT = 2 or
+               g_opt = 3 then
+               begin
+                do UPDATE_POLICY_FILES
+               end
+
+            if G_OPT = 4 then
+                begin
+                do update_policy_files
+                end
+
+            if g_opt = 4 then
+                begin
+                do update_endorsements
+                do delete_endorsements
+                end
+
+/* if g_opt = 1 (endorse) or g_opt = 4 (renew) go to sfpmt001 screen to
+   allow changes to sfpname address or payment plan fields, etc then
+   they can go to the rating screens from there by selecting the "RATE"
+   icon */
+
+            If G_OPT = 8 Then
+                Begin
+                 if l_stop_end = "N" then
+                    begin
+                     G_YEAR = G_YEAR_1
+                     G_END_SEQUENCE = G_END_SEQUENCE_1
+                     Switch(SFSLINE:LOB_CODE)
+                       Case "AUTO"       : Display Modal Screen "sfpmt08a"
+                       Case "PAUTO"      : Display Modal Screen "sfpmt08e"
+                       case "CPORTFOLIO" : display modal screen "sfpmt08b"
+                       Default           : Display Modal Screen "sfpmt008"
+                     End
+                    end
+                End
+
+            If G_OPT = 10 Then
+                Begin
+                 if l_stop_end = "N" then
+                    begin
+                     G_YEAR = G_YEAR_1
+                     G_END_SEQUENCE = G_END_SEQUENCE_1
+                     if arspayplan:manual_payment_plan = 1 or
+                        sfpname:payment_plan = 1 and
+                        sfscompany:boiler_rating = 4 then
+                         begin
+                         display modal screen "sfpmt01s"
+                         end
+                     else
+                         begin
+                         Switch(SFSLINE:LOB_CODE)
+                           Case "AUTO"  : Display Modal Screen "sfpmt02e"
+                           Case "PAUTO" : Display Modal Screen "sfpmt02f"
+                           Default      : Display Modal Screen "sfpmt02d"
+                           End
+                         end
+                    end
+
+                function = "redisplay"
+                write("%c%s",1005,"")
+                pause(200)
+                End
+
+            If G_OPT = 8 then
+                Begin
+                 if l_stop_end = "N" then
+                   begin
+                    L_SCREEN = "sfpmt001" -- to allow changes to name/address and rating
+                    FUNCTION = "GOSCREEN" -- sfpmt001 is in the same library as this program
+                   end
+                End
+
+            If G_OPT = 1 Or
+               G_OPT = 4 or
+               g_opt = 5 Then
+                Begin
+                if l_stop_end = "N" then
+                  begin
+                   G_YEAR = G_YEAR_1
+                   G_END_SEQUENCE = G_END_SEQUENCE_1
+                   L_SCREEN = "sfpmt001" -- to allow changes to name/address and rating
+                   If G_DELETE_LOC = "Y" And
+                      G_OPT = 4 Then
+                       Begin
+                       Switch(SFSLINE:LOB_CODE)
+                         Case "AUTO" : Display Modal Screen "sfpmt08a"
+                         Case "PAUTO" : Display Modal Screen "sfpmt08d"
+                         Default     : Display Modal Screen "sfpmt008"
+                         End
+                       End
+                   If G_DELETE_LOB = "Y" And
+                      G_OPT = 4 Then
+                       Begin
+                       Display Modal Screen "sfpmt08c"
+                       End
+                   FUNCTION = "GOSCREEN" -- sfpmt001 is in the same library as this program
+                  end
+                End
+
+            If g_opt = 9 then
+               begin
+                if  l_redisplay = "Y" Then
+                   Begin
+                   g_end_sequence_1 = 9999
+                 --  G_YEAR = G_YEAR_1
+                   G_END_SEQUENCE = g_end_sequence_1
+                   L_SCREEN = "sfpmt001" -- to allow changes to name/address and rating
+                   FUNCTION = "GOSCREEN" -- sfpmt001 is in the same library as this program
+                   display modal screen "sfpmt006"
+                   End
+               end
+
+/* if g_opt = 2 (cancel) or g_opt = 3 (reinstate) go to appropriate library
+   then popup the final rating screen. Dont allow them to change anything
+   just display totals */
+
+            If G_OPT = 2 Or
+               G_OPT = 3 Then
+                Begin
+                G_YEAR = G_YEAR_1
+                G_END_SEQUENCE = G_END_SEQUENCE_1
+                if sfsscreen:version7_policy_library <> "" then
+                    l_lib = sfsscreen:version7_policy_library
+                else
+                    L_LIB = SFSSCREEN:POLICY_LIBRARY
+                access sfsdefault, set sfsdefault:sfs_code = "SFS", generic
+
+                if sfpname:history_policy = 1 then
+                    l_lib = "sfplibz"
+
+                if sfsdefault:manual_premium_update = 1 then
+                    do manual_screen
+
+                    access sfsline, set sfsline:company_id       = sfpname:company_id,
+                                        sfsline:line_of_business = sfpname:line_of_business,
+                                        sfsline:lob_subline      = "00", generic
+
+                    if sfsline:lob_code one of "UMBRELLA" and
+                       sfpname:company_id = "FARMERS" then
+                        l_lib = "sfplibcx"
+
+                FUNCTION = "GOLIB" -- go right to the library
+                End
+
+            End -- end of trans code <> 11 or trans_code = 11 and
+                 -- policy is being reinstated
+
+/* if sfppoint:converted = "Y" and last transaction was 11 (policy canceled) and
+   g_opt = 1(endorse) or g_opt = 2(cancellation) or g_opt = 4 (renew) then dont
+   allow them to continue, display error */
+
+        If (L_TRANS_CODE = 11 And
+           (G_OPT = 1 Or
+           g_opt = 5 or
+           G_OPT = 8 Or
+           g_opt = 10 or
+           G_OPT = 2 Or
+           G_OPT = 4)) Then
+            Error 1296
+
+/* if sfppoint:coverted = "Y" and last transaction was not an 11 (policy canceled)
+   and g_opt = 3 (reinstate) dont allow them to continue. Dont allow reinstatement
+   if policy is not cancelled first, display error */
+
+        If ((L_TRANS_CODE <> 11 And
+           G_OPT = 3 and
+           sfsline:lob_code not one of "WORK") or
+           (sfsline:lob_code one of "WORK" and
+           g_opt = 3 and
+           l_cancelled = "N")) Then
+            Error 1297
+      END
+
+/* if sfppoint:converted = "N" then allow them to continue their previous
+   transaction, do not update any files but display the appropriate screens or
+   library by their last transaction */
+
+    Else
+      BEGIN
+        If L_CONVERTED = "N" Then
+            Begin
+            If G_OPT = 1 Or
+               G_OPT = 2 Or
+               G_OPT = 3 Or
+               G_OPT = 4 Or
+               g_opt = 5 or
+               G_OPT = 8 or
+               g_opt = 10 or
+               g_opt = 9 Then
+                Begin
+
+/* compare g_opt with last trans_code if they don't match give them an error
+   that last transaction was not updated and dont let them continue
+   until their prior transaction is complete */
+
+
+                Switch(G_OPT)
+                  Case 1, 8, 10 : If L_TRANS_CODE Not One Of 12, 13 Then -- endorsement
+                                      Error 1298
+                  Case 5        : If L_TRANS_CODE Not One Of 15 Then -- audit
+                                      Error 1298
+                  Case 2        : If L_TRANS_CODE <> 11 Then -- cancellation
+                                      Error 1298
+                  Case 3        : If L_TRANS_CODE <> 16 Then -- reinstatement
+                                      Error 1298
+                  Case 4        : If L_TRANS_CODE <> 14 Then -- renewal
+                                      Error 1298
+                  Case 9        : if l_trans_code one of 12, 13 then
+                                      begin
+                                      l_minimum_message = " "
+                                      l_continue_2 = " "
+                                      l_minimum_message = "You did not update after you endorsed. You must go back into Endorsement and update."  -- anniversary renewal change
+                                      l_continue_2 = dialog("On-Renewal Change", "warning.bmp",trun(l_minimum_message),"OK")
+                                      errornumber = 1
+                                      end
+                  End
+
+                If ERRORNUMBER = 0 Then
+                    Begin
+                    if g_opt = 10 then
+                        begin
+                        if arspayplan:manual_payment_plan = 1 or
+                           sfpname:payment_plan = 1 then
+                            begin
+                            display modal screen "sfpmt01s"
+                            end
+                        else
+                            begin
+                            Switch(SFSLINE:LOB_CODE)
+                              Case "AUTO" : Display Modal Screen "sfpmt02e"
+                              Case "PAUTO" : Display Modal Screen "sfpmt02f"
+                              Default     : Display Modal Screen "sfpmt02d"
+                              End
+                            end
+                        end
+
+                    If G_OPT = 1 Or
+                       G_OPT = 4 Or
+                       g_opt = 5 or
+                       G_OPT = 8 or
+                       g_opt = 9 Then
+                       BEGIN
+
+                        l_REDISPLAY = "N"
+                        l_9999_yes = "N"
+                        l_seq = 9999
+                        access sfpname_alt, set sfpname_alt:policy_no = g_policy_no,
+                                        sfpname_alt:pol_year = g_year,
+                                        sfpname_alt:end_sequence = l_seq, exact
+
+                        if sfpname_alt:policy_no = g_policy_no and
+                           sfpname_alt:pol_year = g_year and
+                           sfpname_alt:end_sequence = l_seq then
+                             begin               -- a 9999 record exists
+                                l_9999_yes = "Y"
+                             end
+
+                        if G_opt = 9 then
+                           BEGIN
+                            if l_9999_yes = "Y" then
+                            begin
+                             l_minimum_message = "On-Renewal Change already exist. Do you want to delete it?"
+                             l_continue_1 = dialog("On-Renewal Change", "warning.bmp",trun(l_minimum_message),"Yes","No")
+                             if l_continue_1 = "Yes" then
+                                begin
+                                   l_save_end_sequence = g_end_sequence
+                                   g_end_sequence = 9999
+                                   do delete_sfp_files    -- deletes 9999 record
+                                   l_minimum_message = "Do you want to create a new On-Renewal Change?"
+                                   l_continue_2 = dialog("On-Renewal Change", "warning.bmp",trun(l_minimum_message),"Yes","No")
+                                   if l_continue_2 = "Yes" then
+                                      begin        -- create new 9999 record
+                                       g_trans_eff = g_exp_date
+                                       Display Modal Screen "sfpmt01g" -- trans eff date screen
+--                                       At Line 15, Column 10
+--                                       With Initial Function "CHG"
+
+                                       Do UPDATE_POLICY_FILES
+                                      end
+                                   else         -- no don't recreate 9999 record
+                                      begin
+                                       L_REDISPLAY = "N"
+                                       l_9999_YES = "N"
+                                       g_end_sequence = l_save_end_sequence
+                                       l_3_continue = "No"
+                                      end
+                                end  -- end delete yes
+                             else  -- no dont delete - just display
+                                begin
+                                 g_end_sequence = 9999
+                                 L_REDISPLAY = "Y"
+                                 l_9999_yes = "Y"
+                                end
+                            end -- end 9999_yes = yes
+                           END -- if opt = 9
+
+                        if (G_opt = 1 or
+                            g_opt = 7 or
+                            g_opt = 8 or
+                            g_opt = 10) then
+                             BEGIN
+                             if l_9999_yes = "Y" then
+                              begin
+                                l_continue_1 = ""
+                                l_save_end_sequence = g_end_sequence
+                                l_minimum_message = "On-Renewal Change already exist.  Do you want to delete?"
+                                l_continue_1 = dialog("On-Renewal Change", "warning.bmp",trun(l_minimum_message),"No","Yes")
+                                if l_continue_1 = "Yes" then   -- yes delete
+                                 begin
+                                   g_end_sequence = 9999
+                                   do delete_sfp_files    -- deletes 9999 record
+                                   l_9999_yes = "N"
+                                   l_continue_2 = ""
+                                   l_minimum_message = " "
+                                   l_minimum_message = "On-Renewal Change deleted. Continue?"
+                                   l_continue_2 = dialog("On-Renewal Change", "warning.bmp",trun(l_minimum_message),"No","Yes")
+                                   if l_continue_2 = "No" then
+                                     begin
+                                      l_redisplay = "N"
+                                     end
+                                   else
+                                     begin
+                                      l_redisplay = "Y"
+                                     end
+                                 end
+                                else  -- no to delete
+                                   begin
+                                     l_redisplay = "N"
+                                   end
+                              g_end_sequence = l_save_end_sequence
+                              end
+                             else  -- l_9999_yes = no
+                              begin
+                              l_redisplay = "Y"
+                              end
+                             END
+
+
+                        if l_9999_yes = "N" then
+                          begin
+                          G_YEAR = G_YEAR
+                          G_END_SEQUENCE = G_END_SEQUENCE
+                          end
+
+                        if L_REDISPLAY = "Y" then
+                          begin
+                            L_SCREEN = "sfpmt001"
+                            FUNCTION = "GOSCREEN"
+                          end
+                       END
+
+                    if g_opt = 4 then
+                        begin
+                        L_SCREEN = "sfpmt001"
+                        FUNCTION = "GOSCREEN"
+                        end
+
+                    If G_OPT = 2 Or
+                       G_OPT = 3 Then
+                        Begin
+                        G_YEAR = G_YEAR
+                        G_END_SEQUENCE = G_END_SEQUENCE
+                        if sfsscreen:version7_policy_library <> "" then
+                            l_lib = sfsscreen:version7_policy_library
+                        else
+                            L_LIB = SFSSCREEN:POLICY_LIBRARY
+
+                        if sfpname:history_policy = 1 then
+                            l_lib = "sfplibm"
+
+                        if sfsdefault:manual_premium_update = 1 then
+                            do manual_screen
+
+                        access sfsline, set sfsline:company_id       = sfpname:company_id,
+                                            sfsline:line_of_business = sfpname:line_of_business,
+                                            sfsline:lob_subline      = "00", generic
+
+                        if sfsline:lob_code one of "UMBRELLA" and
+                           sfpname:company_id = "FARMERS" then
+                            l_lib = "sfplibcx"
+
+                        FUNCTION = "GOLIB"
+                        End
+                    End -- end of error number =0
+
+                End -- end of g-opt = 1,2,3,4,5,8,9
+            End -- end of l_converted = N
+
+    End
+end
+if l_3_continue = "No" then
+ {
+   function="redisplay"
+ }
+end
+
+procedure manual_screen
+begin
+access sfsline, set sfsline:company_id       = sfpname:company_id,
+                    sfsline:line_of_business = sfpname:line_of_business,
+                    sfsline:lob_subline      = "00", generic
+
+switch(sfsline:lob_code)
+  case "BOP"      :  begin
+                     access bopgeneral, set bopgeneral:policy_no = g_policy_no,
+                                            bopgeneral:pol_year  = g_year, generic
+
+                     if bopgeneral:policy_no <> g_policy_no or
+                        bopgeneral:pol_year <> g_year then
+                         begin
+                         l_lib = "sfplibm"
+                         end
+                     end
+  case "HOME",
+       "MOBILE",
+       "DWELLING"  : begin
+                     access plppersonal, set plppersonal:policy_no = g_policy_no,
+                                             plppersonal:pol_year  = g_year, generic
+
+                     if plppersonal:policy_no <> g_policy_no or
+                        plppersonal:pol_year  <> g_year then
+                         begin
+                         l_lib = "sfplibm"
+                         end
+                     end
+  case "LIABILITY" : begin
+                     access cppliability, set cppliability:policy_no = g_policy_no,
+                                              cppliability:pol_year  = g_year, generic
+
+                     if cppliability:policy_no <> g_policy_no or
+                        cppliability:pol_year  <> g_year then
+                         begin
+                         l_lib = "sfplibm"
+                         end
+                     end
+  case "FARMFIRE" :  begin
+                     access cppfarm, set cppfarm:policy_no = g_policy_no,
+                                         cppfarm:pol_year  = g_year, generic
+
+                     if cppfarm:policy_no <> g_policy_no or
+                        cppfarm:pol_year  <> g_year then
+                         begin
+                         l_lib = "sfplibm"
+                         end
+                     end
+  end
+
+end
+
+procedure cx_reins_screen
+begin
+access sfsline, set sfsline:company_id       = sfpname:company_id,
+                    sfsline:line_of_business = sfpname:line_of_business,
+                    sfsline:lob_subline      = "00", generic
+
+switch(sfsline:lob_code)
+  case "UMBRELLA" :  begin
+                     access cppumbrella, set cppumbrella:policy_no = g_policy_no,
+                                             cppumbrella:pol_year  = g_year, generic
+
+                     if cppumbrella:policy_no <> g_policy_no or
+                        cppumbrella:pol_year <> g_year then
+                         begin
+                         l_lib = "sfplibcx"
+                         end
+                     end
+  end
+
+end
+
+procedure check_dates
+begin
+l_eff_date = 0
+Access SFPPOINT_ALIAS, Set SFPPOINT_ALIAS:POLICY_NO = SFPPOINT:POLICY_NO,
+                           SFPPOINT_ALIAS:POL_YEAR = G_YEAR, Generic
+
+if sfppoint_alias:converted = "Y" then
+    l_eff_date = dateadd(sfpname:eff_date,0,1)
+else
+    l_eff_date = sfpname:eff_date
+l_no_days = 0
+l_no_days = l_eff_date - todaysdate
+if l_no_days >= 182 and
+   G_opt not one of 9 then
+    Warning "Check Your Dates you are renewing 6 months or greater in advance"
+
+end
+
+Procedure DELETE_SFP_FILES
+Begin
+    Include "sfpname_delete.pro"
+
+    include "sfpnamewc_delete.pro"
+
+    Include "sfpmaster_delete.pro"
+
+    Include "sfpani_delete.pro"
+
+    Include "sfplocation_delete.pro"
+
+    Include "sfpreins_delete.pro"
+
+    Include "sfpreins1_delete.pro"
+
+    Include "sfpsupp_delete.pro"
+
+    Include "sfpsupp1_delete.pro"
+
+    Include "sfpend_delete.pro"
+
+    Include "sfpend1_delete.pro"
+
+    Include "sfpmisc_delete.pro"
+
+    Include "sfpnotes_delete.pro"
+
+    Include "sfpcomments_delete.pro"
+
+    L_POLICY_CONVERT = Str(G_POLICY_NO,9) + " " + Str(G_YEAR,4) + " " +
+                       Str(G_END_SEQUENCE,4)
+
+    If SFSCOMPANY:DEBUG_MODE = 0 Then
+        Begin
+        Proc ("cli csbatch sfpcv400 %s",L_POLICY_CONVERT)/noconsole
+        End
+    else
+        Begin
+        Proc ("cli csbatch sfpcv400 %s",L_POLICY_CONVERT)
+        End
+
+    If SFSCOMPANY:DEBUG_MODE = 0 Then
+        Begin
+--        proc("cli csbatch sfpcv100 %s",l_policy_convert)/noconsole
+        Switch(SFSLINE:LOB_CODE)
+          Case "BOP"      : Begin
+                            Proc ("cli csbatch bopcv300 %s",L_POLICY_CONVERT)/noconsole -- businessowners
+                            End
+          Case "SCP"      : Begin
+                            Proc ("cli csbatch scpcv300 %s",L_POLICY_CONVERT)/noconsole -- businessowners
+                            End
+          Case "SMP",
+               "PROPERTY",
+               "LIABILITY",
+               "LIQUOR",
+               "FARMFIRE",
+               "CINLAND",
+               "ARTISAN"  : Begin
+                            Proc ("cli csbatch cppcv300 %s",L_POLICY_CONVERT)/noconsole -- businessowners
+                            Proc ("cli csbatch cppcv300a %s",L_POLICY_CONVERT)/noconsole -- businessowners
+                            Proc ("cli csbatch cppcv300c %s",L_POLICY_CONVERT)/noconsole -- businessowners
+                            End
+          Case "UMBRELLA" : Begin
+                            Proc ("cli csbatch cupcv300 %s",L_POLICY_CONVERT)/noconsole -- auto
+                            End
+          Case "PINLAND"  : Begin
+                            Proc ("cli csbatch impcv300 %s",L_POLICY_CONVERT)/noconsole -- auto
+                            End
+          Case "AUTO"     : Begin
+                            Proc ("cli csbatch capcv300 %s",L_POLICY_CONVERT)/noconsole -- auto
+                            End
+          Case "PAUTO"     : Begin
+                            Proc ("cli csbatch papcv300 %s",L_POLICY_CONVERT)/noconsole -- auto
+                            End
+          Case "PUMBRELLA" : Begin
+                             Proc ("cli csbatch dlpcv300 %s",L_POLICY_CONVERT)/noconsole -- auto
+                             End
+          Case "FARM"      : Begin
+                             Proc ("cli csbatch flpcv300 %s",L_POLICY_CONVERT)/noconsole -- auto
+                             End
+          Case "RENTAL"    : Begin
+                             Proc ("cli csbatch rlpcv300 %s",L_POLICY_CONVERT)/noconsole -- auto
+                             End
+          Case "CHURCH"    : Begin
+                             Proc ("cli csbatch chpcv300 %s",L_POLICY_CONVERT)/noconsole -- auto
+                             End
+          Case "WORK"      : Begin
+                             Proc ("cli csbatch wcpcv300 %s",L_POLICY_CONVERT)/noconsole -- auto
+                             End
+          Case "BOAT"      : Begin
+                             Proc ("cli csbatch pcpcv300 %s",L_POLICY_CONVERT)/noconsole -- auto
+                             End
+          Case "HOME",
+               "DWELLING",
+               "SPECIAL",
+               "MOBILE",
+               "PAK",
+               "COMPLIAB",
+               "REGFARM",
+               "COMMRISK",
+               "POULTRY"   : Begin
+                               Proc ("cli csbatch plpcv300 %s",L_POLICY_CONVERT)/noconsole -- personal lines
+                             End
+          case "CPORTFOLIO" : begin
+                              Proc ("cli csbatch cppcv300 %s",L_POLICY_CONVERT)/noconsole -- businessowners
+                              Proc ("cli csbatch cppcv300a %s",L_POLICY_CONVERT)/noconsole -- businessowners
+                              Proc ("cli csbatch cppcv300c %s",L_POLICY_CONVERT)/noconsole -- businessowners
+                              Proc ("cli csbatch bopcv300 %s",L_POLICY_CONVERT)/noconsole -- businessowners
+                              Proc ("cli csbatch cupcv300 %s",L_POLICY_CONVERT)/noconsole -- auto
+
+                              Proc ("cli csbatch capcv300 %s",L_POLICY_CONVERT)/noconsole -- auto
+                              Proc ("cli csbatch wcpcv300 %s",L_POLICY_CONVERT)/noconsole -- auto
+                              end
+          End
+        End
+    Else
+      Begin
+--        proc("cli csbatch sfpcv100 %s",l_policy_convert)
+        Switch(SFSLINE:LOB_CODE)
+          Case "BOP"      : Begin
+                            Proc ("cli csbatch bopcv300 %s",L_POLICY_CONVERT) -- businessowners
+                            End
+          Case "SCP"      : Begin
+                            Proc ("cli csbatch scpcv300 %s",L_POLICY_CONVERT) -- businessowners
+                            End
+          Case "SMP",
+               "PROPERTY",
+               "LIABILITY",
+               "LIQUOR",
+               "FARMFIRE",
+               "CINLAND",
+               "ARTISAN"  : Begin
+                            Proc ("cli csbatch cppcv300 %s",L_POLICY_CONVERT) -- businessowners
+                            Proc ("cli csbatch cppcv300a %s",L_POLICY_CONVERT) -- businessowners
+                            Proc ("cli csbatch cppcv300c %s",L_POLICY_CONVERT) -- businessowners
+                            End
+          Case "UMBRELLA" : Begin
+                            Proc ("cli csbatch cupcv300 %s",L_POLICY_CONVERT) -- auto
+                            End
+          Case "PINLAND"  : Begin
+                            Proc ("cli csbatch impcv300 %s",L_POLICY_CONVERT) -- auto
+                            End
+          Case "AUTO"     : Begin
+                            Proc ("cli csbatch capcv300 %s",L_POLICY_CONVERT) -- auto
+                            End
+          Case "PAUTO"     : Begin
+                            Proc ("cli csbatch papcv300 %s",L_POLICY_CONVERT) -- auto
+                            End
+          Case "PUMBRELLA" : Begin
+                             Proc ("cli csbatch dlpcv300 %s",L_POLICY_CONVERT) -- auto
+                             End
+          Case "FARM"      : Begin
+                             Proc ("cli csbatch flpcv300 %s",L_POLICY_CONVERT) -- auto
+                             End
+          Case "RENTAL"    : Begin
+                             Proc ("cli csbatch rlpcv300 %s",L_POLICY_CONVERT) -- auto
+                             End
+          Case "CHURCH"    : Begin
+                             Proc ("cli csbatch chpcv300 %s",L_POLICY_CONVERT) -- auto
+                             End
+          Case "WORK"      : Begin
+                             Proc ("cli csbatch wcpcv300 %s",L_POLICY_CONVERT) -- auto
+                             End
+          Case "BOAT"      : Begin
+                             Proc ("cli csbatch pcpcv300 %s",L_POLICY_CONVERT) -- auto
+                             End
+          Case "HOME",
+               "DWELLING",
+               "SPECIAL",
+               "MOBILE",
+               "PAK",
+               "COMPLIAB",
+               "REGFARM",
+               "COMMRISK",
+               "POULTRY"   : Begin
+                               Proc ("cli csbatch plpcv300 %s",L_POLICY_CONVERT) -- personal lines
+                             End
+          case "CPORTFOLIO" : begin
+                              Proc ("cli csbatch cppcv300 %s",L_POLICY_CONVERT)
+                              Proc ("cli csbatch cppcv300a %s",L_POLICY_CONVERT)
+                              Proc ("cli csbatch cppcv300c %s",L_POLICY_CONVERT)
+                              Proc ("cli csbatch bopcv300 %s",L_POLICY_CONVERT)
+                              Proc ("cli csbatch cupcv300 %s",L_POLICY_CONVERT)
+                              Proc ("cli csbatch capcv300 %s",L_POLICY_CONVERT)
+                              Proc ("cli csbatch wcpcv300 %s",L_POLICY_CONVERT)
+                              end
+        End
+      End
+
+
+/* check to see if it is a 9999 record because 9999 has no spfpoint record */
+
+      Access SFPPOINT_ALIAS, Set SFPPOINT_ALIAS:POLICY_NO = G_POLICY_NO,
+                                 SFPPOINT_ALIAS:POL_YEAR = G_YEAR, Exact
+
+      If SFPPOINT_ALIAS:POLICY_NO = G_POLICY_NO And
+         SFPPOINT_ALIAS:POL_YEAR = G_YEAR Then
+          BEGIN
+            if l_9999_yes = "N" then
+             Begin
+              If SFPPOINT_ALIAS:END_SEQUENCE = 0 Then
+                  Begin
+                  Delete SFPPOINT_ALIAS
+                  End
+              Else
+                  Begin
+                    Change SFPPOINT_ALIAS
+                        Begin
+                        SFPPOINT_ALIAS:END_SEQUENCE = SFPPOINT_ALIAS:END_SEQUENCE - 1
+                        SFPPOINT_ALIAS:CONVERTED = "Y"
+                        End
+
+                  End
+             End
+            else  -- g_opt = 9
+             Begin
+              Change SFPPOINT_ALIAS
+                 Begin
+                 SFPPOINT_ALIAS:anniversary_record = 00
+                 End
+
+             End
+          END
+
+
+-- sfpcurrent
+
+     Access SFPCURRENT, Set SFPCURRENT:POLICY_NO = G_POLICY_NO, Exact
+
+     If SFPCURRENT:POLICY_NO = G_POLICY_NO Then
+        BEGIN
+         if l_9999_yes = "N" then
+          Begin
+           if sfpcurrent:pol_Year = g_year  and
+              SFPCURRENT:END_SEQUENCE = 0 Then
+               Begin
+               L_YEAR = G_YEAR - 1
+               Access SFPPOINT_ALIAS, Set SFPPOINT_ALIAS:POLICY_NO = G_POLICY_NO,
+                                          SFPPOINT_ALIAS:POL_YEAR = L_YEAR, Generic
+
+               Change SFPCURRENT
+                   Begin
+                   SFPCURRENT:POL_YEAR = SFPCURRENT:POL_YEAR - 1
+                   SFPCURRENT:END_SEQUENCE = SFPPOINT_ALIAS:END_SEQUENCE
+                   End
+               End
+           Else
+           if sfpcurrent:pol_year = g_year then
+               Begin
+               Change SFPCURRENT
+                   Begin
+                   SFPCURRENT:END_SEQUENCE = SFPCURRENT:END_SEQUENCE - 1
+                   End
+               End
+          End  -- end of  opt <> 9
+         else  -- opt =9
+          Begin
+           if sfpcurrent:pol_year = g_year then
+               Begin
+               Change SFPCURRENT
+                   Begin
+                   SFPCURRENT:anniversary_record = 00
+                   End
+               End
+
+          End -- end of opt =9
+
+        END
+End
+
+/*procedure update_lrssetup
+begin
+access lrssetup, set lrssetup:policy_no = g_policy_no, using second index, generic
+
+while lrssetup:policy_no = g_policy_no
+    begin
+    change lrssetup
+        begin
+        lrssetup:cancelled_policy = 0
+        lrssetup:status = "O"
+        end
+
+    next lrssetup
+    end
+
+end*/
+
+Procedure POLICY_QUOTE
+Begin
+/* get new quote number using csexec file and update quote files
+   caqquote is the generic record we use for quote system, it does
+   not matter what the line of business is all lines get the next
+   quote number available */
+
+I_CSEXEC_APPLICATION = "SFQQUOTE"
+Include "sfscsexec.pro"
+
+G_NEW_QUOTE_NO = I_CSEXEC_NUMBER
+Do UPDATE_QUOTE_FILES
+
+G_QUOTE_NO = G_NEW_QUOTE_NO
+L_QUOTE_CONVERT = Str(G_POLICY_NO,9) + " " + Str(G_YEAR,4) + " " + Str(G_END_SEQUENCE,4)
+                  + " " + Str(G_NEW_QUOTE_NO,8)
+
+If SFSCOMPANY:DEBUG_MODE = 0 Then
+    Begin
+    Proc ("cli csbatch sfpcv200 %s",L_QUOTE_CONVERT)/noconsole
+    End
+else
+    Begin
+    Proc ("cli csbatch sfpcv200 %s",L_QUOTE_CONVERT)
+    End
+
+G_QUOTE_NO = G_NEW_QUOTE_NO
+L_LIB = "sfqlib"
+FUNCTION = "GOLIB"
+
+/* end of policy_quote */
+End
+
+procedure delete_endorsements
+begin
+access sfpend, set sfpend:policy_no = g_policy_no,
+                   sfpend:pol_year  = g_year_1,
+                   sfpend:end_sequence = g_end_sequence_1, generic
+
+while sfpend:policy_no = g_policy_no and
+      sfpend:pol_year  = g_year_1 and
+      sfpend:end_sequence = g_end_sequence_1
+        begin
+        if sfpend:form_edition = "" then
+            delete sfpend
+
+        next sfpend
+        end
+
+end
+
+procedure update_endorsements
+begin
+do access_sfprenewchanges
+access sfpend, set sfpend:policy_no = g_policy_no,
+                   sfpend:pol_year  = g_year_1,
+                   sfpend:end_sequence = g_end_sequence_1, generic
+
+while sfpend:policy_no = g_policy_no and
+      sfpend:pol_year  = g_year_1 and
+      sfpend:end_sequence = g_end_sequence_1
+        begin
+        l_sub_code = sfpend:sub_code
+        l_prem_no  = sfpend:prem_no
+        l_build_no = sfpend:build_no
+        if sfpend:code = l_form_to_look_for[1] then
+            begin
+            l_code = l_form_to_change_to[1]
+            do access_sfsoptend
+            do change_sfpend_alias
+            end
+        if sfpend:code = l_form_to_look_for[2] then
+            begin
+            l_code = l_form_to_change_to[2]
+            do access_sfsoptend
+            do change_sfpend_alias
+            end
+        if sfpend:code = l_form_to_look_for[3] then
+            begin
+            l_code = l_form_to_change_to[3]
+            do access_sfsoptend
+            do change_sfpend_alias
+            end
+        if sfpend:code = l_form_to_look_for[4] then
+            begin
+            l_code = l_form_to_change_to[4]
+            do access_sfsoptend
+            do change_sfpend_alias
+            end
+        if sfpend:code = l_form_to_look_for[5] then
+            begin
+            l_code = l_form_to_change_to[5]
+            do access_sfsoptend
+            do change_sfpend_alias
+            end
+
+        next sfpend
+        end
+
+end
+
+procedure access_sfprenewchanges
+begin
+l_state = sfpmaster:state
+access sfsline, set sfsline:company_id       = sfpname:company_id,
+                    sfsline:line_of_business = sfpname:line_of_business,
+                    sfsline:lob_subline      = "00", generic
+
+if sfsline:lob_code one of "HOME", "DWELLING" then
+    begin
+    access plppersonal, set plppersonal:policy_no    = g_policy_no,
+                            plppersonal:pol_year     = g_year,
+                            plppersonal:end_sequence = g_end_sequence, generic
+
+    l_state = plppersonal:state
+    end
+
+if sfsline:lob_code one of "BOAT" then
+    begin
+    access pcpgeneral, set pcpgeneral:policy_no    = g_policy_no,
+                           pcpgeneral:pol_year     = g_year,
+                           pcpgeneral:end_sequence = g_end_sequence, generic
+
+    l_state = pcpgeneral:state
+    end
+
+access sfprenewchanges, set sfprenewchanges:company_id       = sfpname:company_id,
+                            sfprenewchanges:state            = l_state,
+                            sfprenewchanges:line_of_business = sfpname:line_of_business, generic
+
+while sfprenewchanges:company_id       = sfpname:company_id and
+      sfprenewchanges:state            = l_state and
+      sfprenewchanges:line_of_business = sfpname:line_of_business
+        begin
+        if sfpname:eff_date >= sfprenewchanges:rate_date then
+             begin
+             l_sub = 1
+             while l_sub < 6
+                 begin
+                 l_form_to_look_for[l_sub]  = sfprenewchanges:form_to_look_for[l_sub]
+                 l_form_to_change_to[l_sub] = sfprenewchanges:form_to_change_to[l_sub]
+                 l_sub  = l_sub + 1
+                 end
+             end
+
+        next sfprenewchanges
+        end
+
+end
+
+procedure change_sfpend_alias
+begin
+access sfpend_alias, set sfpend_alias:policy_no    = g_policy_no,
+                         sfpend_alias:pol_Year     = g_year_1,
+                         sfpend_alias:end_sequence = g_end_sequence_1,
+                         sfpend_alias:prem_no      = l_prem_no,
+                         sfpend_alias:build_no     = l_build_no,
+                         sfpend_alias:sub_code     = l_sub_code, generic
+
+if sfpend_alias:policy_no    = g_policy_no and
+   sfpend_alias:pol_year     = g_year_1 and
+   sfpend_alias:end_sequence = g_end_sequence_1 and
+   sfpend_alias:prem_no      = l_prem_no and
+   sfpend_alias:build_no     = l_build_no and
+   sfpend_alias:sub_code     = l_sub_code then
+    begin
+    change sfpend_alias
+        begin
+        sfpend_alias:code               =       l_code/raw
+        sfpend_alias:form_edition       =       l_form_edition/raw
+        sfpend_alias:description        =       l_description/raw
+        end
+    end
+
+end
+
+Procedure UPDATE_POLICY_FILES
+
+Begin
+/* update policy files from appropriate transaction*/
+
+if g_opt = 9 then -- anniversary renewal change
+ begin
+ g_year_1 = g_year
+ g_end_sequence_1 = 9999
+ end
+
+if g_opt = 4 and
+   l_9999_yes = "Y" then
+     begin
+     g_end_sequence = 9999
+     end
+
+
+l_company_id = sfpname:company_id
+access scipscontrol,
+   set scipscontrol:company_id = l_company_id, generic
+
+--warning scipscontrol:company_id
+--warning "THIS is the flag" + scipscontrol:DONT_REMOVE_LOB_14_ON_CONVERSION + "<--"
+Include "sfpname_alias.pro"
+
+access sfpname, set sfpname:policy_no = g_policy_no,
+                    sfpname:pol_year = g_year_1,
+                    sfpname:end_sequence = g_end_sequence_1, generic
+
+if sfpname:policy_no = g_policy_no and
+   sfpname:pol_year = g_year_1 and
+   sfpname:end_sequence = g_end_sequence_1 then
+    begin
+    if g_opt = 4 and
+       sfpname:company_id one of "DELOS", "GGUND", "LEBINS", "FARMERS" then
+        begin
+        if month(sfpname:eff_date) = 02 and
+           day(sfpname:eff_date) = 29 and
+           month(sfpname:exp_date) = 02 and
+           day(sfpname:exp_date) = 28 then
+            begin
+            l_month = month(sfpname:eff_date)
+            l_day = 28
+            l_year = year(sfpname:eff_date)
+            l_str_date = str(l_month,2) + str(l_day,2) + str(l_year,4)
+            change sfpname
+                begin
+                sfpname:eff_date = date(l_str_date)
+                end
+            end
+        if month(sfpname:exp_date) = 02 and
+           day(sfpname:exp_date) = 29 and
+           month(sfpname:eff_date) = 02 and
+           day(sfpname:eff_date) = 28 then
+            begin
+            l_month = month(sfpname:exp_date)
+            l_day = 28
+            l_year = year(sfpname:exp_date)
+            l_str_date = str(l_month,2) + str(l_day,2) + str(l_year,4)
+            change sfpname
+                begin
+                sfpname:exp_date = date(l_str_date)
+                end
+            end
+        end
+    end
+
+include "sfpnamewc_alias.pro"
+
+L_DIFF_YEAR = Year(SFPNAME:EXP_DATE) - Year(SFPNAME:EFF_DATE)
+If G_OPT = 4 And
+   L_DIFF_YEAR > 1 Then
+    L_YEAR_IN = Year(SFPNAME:EXP_DATE) - G_YEAR
+
+access sfpname_alias, set sfpname_alias:policy_no = g_policy_no,
+                          sfpname_alias:pol_year = g_year_1,
+                          sfpname_alias:end_sequence = g_end_sequence_1, generic
+
+/* for terrorism lookup only */
+if sfpname:line_of_business one of 2, 8, 10, 11, 13 then
+    begin
+    access sfpmaster, set sfpmaster:policy_no = g_policy_no,
+                          sfpmaster:pol_year = g_year,
+                          sfpmaster:end_sequence = g_end_sequence, generic
+
+    l_state = sfpmaster:state
+    access sfsmsoterror, set sfsmsoterror:company_id = sfpname:company_id,
+                             sfsmsoterror:state = l_state,
+                             sfsmsoterror:line_of_business = sfpname:line_of_business, generic
+
+    l_add_back = 0
+    while sfsmsoterror:company_id = sfpname:company_id and
+          sfsmsoterror:state = l_state and
+          sfsmsoterror:line_of_business = sfpname:line_of_business
+            begin
+            if (sfpname:eff_date >= sfsmsoterror:eff_date and
+               (l_terror_eff_date < sfsmsoterror:eff_date or
+               l_terror_eff_date = 0)) then
+                begin
+                l_terror_eff_date = sfsmsoterror:Eff_date
+                l_add_back = sfsmsoterror:add_terror_back_on_renewal
+                end
+
+            next sfsmsoterror
+            end
+    end
+
+Include "sfpmaster_alias.pro"
+
+Include "sfpani_alias.pro"
+
+include "sfpamt_alias.pro"
+
+include "sfpamt1_alias.pro"
+
+include "sfpmastsupp_alias.pro"
+
+Include "sfplocation_alias.pro"
+
+Include "sfpreins_alias.pro"
+
+include "sfpreins1_alias.pro"
+
+Include "sfpsupp_alias.pro"
+
+Include "sfpsupp1_alias.pro"
+
+Include "sfpend_alias.pro"
+
+Include "sfpend1_alias.pro"
+
+Include "sfpmisc_alias.pro"
+
+Include "sfpnotes_alias.pro"
+
+--include "sfpadvfail_alias.pro"
+
+L_POLICY_CONVERT = Str(G_POLICY_NO,9) + " " + Str(G_YEAR,4) + " " + Str(G_END_SEQUENCE,4)
+                   + " " + Str(G_YEAR_1,4) + " " + Str(G_END_SEQUENCE_1,4) +
+                   " " + Str(G_TRANS_CODE,4)
+
+If SFSCOMPANY:DEBUG_MODE = 0 Then
+    Begin
+    Proc ("cli csbatch sfpcv300 %s",L_POLICY_CONVERT)/noconsole
+    End
+else
+    Begin
+    Proc ("cli csbatch sfpcv300 %s",L_POLICY_CONVERT)
+    End
+
+If SFSCOMPANY:DEBUG_MODE = 0 Then
+    Begin
+    Switch(SFSLINE:LOB_CODE)
+      Case "BOP"     :  Begin
+                        Proc ("cli csbatch bopcv100 %s",L_POLICY_CONVERT)/noconsole -- businessowners
+                        if sfpname:company_id = "FLEMINGTON" and
+                           g_trans_code = 14 then
+                            Proc ("cli csbatch bopcv100a %s",L_POLICY_CONVERT)/noconsole -- businessowners
+                        End
+      Case "SCP"     :  Begin
+                        Proc ("cli csbatch scpcv100 %s",L_POLICY_CONVERT)/noconsole -- businessowners
+                        End
+      Case "SMP",
+           "PROPERTY",
+           "LIABILITY",
+           "LIQUOR",
+           "FARMFIRE",
+           "CINLAND" ,
+           "ARTISAN" :  Begin
+                        Proc ("cli csbatch cppcv100 %s",L_POLICY_CONVERT)/noconsole -- businessowners
+                        Proc ("cli csbatch cppcv100a %s",L_POLICY_CONVERT)/noconsole -- businessowners
+                        Proc ("cli csbatch cppcv100c %s",L_POLICY_CONVERT)/noconsole -- businessowners
+                        Proc ("cli csbatch cppcv100d %s",L_POLICY_CONVERT)/noconsole
+                        if g_trans_code = 14 then
+                            begin
+                            Proc ("cli csbatch cppcv100b %s",L_POLICY_CONVERT)/noconsole
+                            Proc ("cli csbatch cppcv100e %s",L_POLICY_CONVERT)/noconsole
+                            end
+                        End
+      Case "UMBRELLA" : Begin
+                        Proc("cli csbatch cupcv100 %s",L_POLICY_CONVERT)/noconsole -- auto
+                        End
+      Case "PINLAND"  : Begin
+                        Proc("cli csbatch impcv100 %s",L_POLICY_CONVERT)/noconsole -- auto
+                        End
+      Case "AUTO"     : Begin
+                        Proc("cli csbatch capcv100 %s",L_POLICY_CONVERT)/noconsole -- auto
+                        End
+      Case "PAUTO"     : Begin
+                        Proc("cli csbatch papcv100 %s",L_POLICY_CONVERT)/noconsole -- auto
+                        End
+      Case "PUMBRELLA" : Begin
+                         Proc("cli csbatch dlpcv100 %s",L_POLICY_CONVERT)/noconsole -- auto
+                         End
+      Case "FARM"      : Begin
+                         Proc("cli csbatch flpcv100 %s",L_POLICY_CONVERT)/noconsole -- auto
+                         End
+      Case "RENTAL"    : Begin
+                         Proc("cli csbatch rlpcv100 %s",L_POLICY_CONVERT)/noconsole -- auto
+                         End
+      Case "CHURCH"    : Begin
+                         Proc("cli csbatch chpcv100 %s",L_POLICY_CONVERT)/noconsole -- auto
+                         End
+      Case "WORK"      : Begin
+                         Proc("cli csbatch wcpcv100 %s",L_POLICY_CONVERT)/noconsole -- auto
+                         if g_trans_code one of 14 then
+                             Proc("cli csbatch wcpcv100a %s",L_POLICY_CONVERT)/noconsole -- auto
+                         End
+      Case "BOAT"      : Begin
+                         Proc("cli csbatch pcpcv100 %s",L_POLICY_CONVERT)/noconsole -- auto
+                         End
+      Case "HOME",
+           "DWELLING",
+           "SPECIAL",
+           "MOBILE",
+           "PAK",
+           "COMPLIAB",
+           "REGFARM",
+           "COMMRISK",
+           "POULTRY"  : Begin
+                        Proc("cli csbatch plpcv100 %s",L_POLICY_CONVERT)/noconsole -- personal lines
+                        if g_trans_code = 14 then
+                            Proc("cli csbatch plpcv100a %s",L_POLICY_CONVERT)/noconsole -- personal lines
+                        End
+      case "CPORTFOLIO" : begin
+                          Proc ("cli csbatch bopcv100 %s",L_POLICY_CONVERT)/noconsole -- businessowners
+                          Proc ("cli csbatch cppcv100 %s",L_POLICY_CONVERT)/noconsole -- businessowners
+                          Proc ("cli csbatch cppcv100a %s",L_POLICY_CONVERT)/noconsole -- businessowners
+                          Proc ("cli csbatch cppcv100c %s",L_POLICY_CONVERT)/noconsole -- businessowners
+                          Proc ("cli csbatch cppcv100d %s",L_POLICY_CONVERT)/noconsole -- businessowners
+                          if g_trans_code = 14 then
+                              begin
+                              Proc ("cli csbatch cppcv100b %s",L_POLICY_CONVERT)/noconsole -- businessowners
+                              Proc ("cli csbatch cppcv100e %s",L_POLICY_CONVERT)/noconsole -- businessowners
+                              end
+                          Proc("cli csbatch cupcv100 %s",L_POLICY_CONVERT)/noconsole -- auto
+                          Proc("cli csbatch capcv100 %s",L_POLICY_CONVERT)/noconsole -- auto
+                          Proc("cli csbatch wcpcv100 %s",L_POLICY_CONVERT)/noconsole -- auto
+                          if g_trans_code one of 14 then
+                               Proc("cli csbatch wcpcv100a %s",L_POLICY_CONVERT)/noconsole -- auto
+                          end
+      End
+    End
+Else
+    Begin
+    Switch(SFSLINE:LOB_CODE)
+      Case "BOP"     :  Begin
+                        Proc ("cli csbatch bopcv100 %s",L_POLICY_CONVERT) -- businessowners
+                        if sfpname:company_id = "FLEMINGTON" and
+                           g_trans_code = 14 then
+                            Proc ("cli csbatch bopcv100a %s",L_POLICY_CONVERT) -- businessowners
+                        End
+      Case "SCP"     :  Begin
+                        Proc ("cli csbatch scpcv100 %s",L_POLICY_CONVERT) -- businessowners
+                        End
+      Case "SMP",
+           "PROPERTY",
+           "LIABILITY",
+           "LIQUOR",
+           "FARMFIRE",
+           "CINLAND",
+           "ARTISAN" :  Begin
+                        Proc ("cli csbatch cppcv100 %s",L_POLICY_CONVERT) -- businessowners
+                        Proc ("cli csbatch cppcv100a %s",L_POLICY_CONVERT) -- businessowners
+                        Proc ("cli csbatch cppcv100c %s",L_POLICY_CONVERT) -- businessowners
+                        Proc ("cli csbatch cppcv100d %s",L_POLICY_CONVERT) -- businessowners
+                        if g_trans_code = 14 then
+                            begin
+                            Proc ("cli csbatch cppcv100b %s",L_POLICY_CONVERT)
+                            Proc ("cli csbatch cppcv100e %s",L_POLICY_CONVERT)
+                            end
+                        End
+      Case "UMBRELLA" : Begin
+                        Proc("cli csbatch cupcv100 %s",L_POLICY_CONVERT) -- auto
+                        End
+      Case "PINLAND"  : Begin
+                        Proc("cli csbatch impcv100 %s",L_POLICY_CONVERT) -- auto
+                        End
+      Case "AUTO"     : Begin
+                        Proc("cli csbatch capcv100 %s",L_POLICY_CONVERT) -- auto
+                        End
+      Case "PAUTO"     : Begin
+                        Proc("cli csbatch papcv100 %s",L_POLICY_CONVERT) -- auto
+                        End
+      Case "PUMBRELLA" : Begin
+                         Proc("cli csbatch dlpcv100 %s",L_POLICY_CONVERT) -- auto
+                         End
+      Case "FARM"      : Begin
+                         Proc("cli csbatch flpcv100 %s",L_POLICY_CONVERT) -- auto
+                         End
+      Case "RENTAL"    : Begin
+                         Proc("cli csbatch rlpcv100 %s",L_POLICY_CONVERT) -- auto
+                         End
+      Case "CHURCH"    : Begin
+                         Proc("cli csbatch chpcv100 %s",L_POLICY_CONVERT) -- auto
+                         End
+      Case "WORK"      : Begin
+                         Proc("cli csbatch wcpcv100 %s",L_POLICY_CONVERT) -- auto
+                         if g_trans_code one of 14 then
+                             Proc("cli csbatch wcpcv100a %s",L_POLICY_CONVERT) -- auto
+                         End
+      Case "BOAT"      : Begin
+                         Proc("cli csbatch pcpcv100 %s",L_POLICY_CONVERT) -- auto
+                         End
+      Case "HOME",
+           "PAK",
+           "SPECIAL",
+           "DWELLING",
+           "MOBILE",
+           "COMPLIAB",
+           "REGFARM",
+           "COMMRISK",
+           "POULTRY"   : Begin
+                           Proc("cli csbatch plpcv100 %s",L_POLICY_CONVERT) -- personal lines
+                           if g_trans_code = 14 then
+                               Proc("cli csbatch plpcv100a %s",L_POLICY_CONVERT) -- personal lines
+                         End
+      case "CPORTFOLIO" : begin
+                          Proc ("cli csbatch bopcv100 %s",L_POLICY_CONVERT)
+                          Proc ("cli csbatch cppcv100 %s",L_POLICY_CONVERT)
+                          Proc ("cli csbatch cppcv100a %s",L_POLICY_CONVERT)
+                          Proc ("cli csbatch cppcv100c %s",L_POLICY_CONVERT)
+                          Proc ("cli csbatch cppcv100d %s",L_POLICY_CONVERT)
+                          if g_trans_code = 14 then
+                              begin
+                              Proc ("cli csbatch cppcv100b %s",L_POLICY_CONVERT)
+                              Proc ("cli csbatch cppcv100e %s",L_POLICY_CONVERT)
+                              end
+                          Proc("cli csbatch cupcv100 %s",L_POLICY_CONVERT)
+                          Proc("cli csbatch capcv100 %s",L_POLICY_CONVERT)
+                          Proc("cli csbatch wcpcv100 %s",L_POLICY_CONVERT)
+                          if g_trans_code one of 14 then
+                               Proc("cli csbatch wcpcv100a %s",L_POLICY_CONVERT)
+                          end
+      End
+    End
+
+
+    Access SFPPOINT_ALIAS, Set SFPPOINT_ALIAS:POLICY_NO = G_POLICY_NO,
+                             SFPPOINT_ALIAS:POL_YEAR = G_YEAR, Exact
+
+    If G_OPT = 4 Then
+        Begin
+        Add SFPPOINT_ALIAS
+            Begin
+            SFPPOINT_ALIAS:POLICY_NO    = G_POLICY_NO
+            SFPPOINT_ALIAS:POL_YEAR     = G_YEAR_1
+            SFPPOINT_ALIAS:END_SEQUENCE = G_END_SEQUENCE_1
+            SFPPOINT_ALIAS:CONVERTED    = "N"
+            End
+        End
+    else
+     if g_opt = 9 then
+        Begin
+           change sfppoint_alias
+             begin
+             sfppoint_alias:end_sequence = g_end_sequence
+             sfppoint_alias:converted    = "Y"
+             sfppoint_alias:anniversary_record = 01
+             end
+        End
+     else
+      if g_opt = 3 then  -- reinstate
+         begin
+           change sfppoint_alias
+             begin
+             sfppoint_alias:end_sequence = g_end_sequence_1
+             sfppoint_alias:converted    = "N"
+             if l_9999_yes = "Y" then
+                sfppoint_alias:anniversary_record = 01
+             else
+                sfppoint_alias:anniversary_record = 00
+             end
+         end
+      else
+        Begin
+           change sfppoint_alias
+             begin
+             sfppoint_alias:end_sequence = g_end_sequence_1
+             sfppoint_alias:converted    = "N"
+             sfppoint_alias:anniversary_record = 00
+             end
+        End
+
+
+Access SFPCURRENT, Set SFPCURRENT:POLICY_NO = G_POLICY_NO, Exact
+if g_opt <> 9 then   -- anniversary renewal change
+  BEGIN
+  If SFPCURRENT:POLICY_NO <> G_POLICY_NO Then
+      Begin
+      Add SFPCURRENT
+          Begin
+          SFPCURRENT:POLICY_NO = G_POLICY_NO
+          SFPCURRENT:POL_YEAR = G_YEAR_1
+          SFPCURRENT:END_SEQUENCE = G_END_SEQUENCE_1
+          End
+      End
+  Else
+      Begin
+      Change SFPCURRENT
+          Begin
+          if sfpcurrent:pol_Year <= g_year_1  then
+              begin
+                SFPCURRENT:POL_YEAR = G_YEAR_1
+                SFPCURRENT:END_SEQUENCE = G_END_SEQUENCE_1
+                if g_opt = 3 then -- reinstate
+                   begin
+                   if l_9999_yes = "Y" then
+                       begin
+                       sfpcurrent:anniversary_record = 01
+                       end
+                   else
+                       begin
+                       sfpcurrent:anniversary_record = 00
+                       end
+                   end
+                else
+                     begin
+                     sfpcurrent:anniversary_record = 00
+                     end
+              end
+          End
+      End
+  END  -- end anniversary change
+else  -- if G_OPT = 9
+  BEGIN
+    Change SFPCURRENT
+        Begin
+        if sfpcurrent:pol_Year <= g_year_1  then
+            begin
+            SFPCURRENT:POL_YEAR = G_YEAR_1
+            SFPCURRENT:END_SEQUENCE = G_END_SEQUENCE
+            sfpcurrent:anniversary_record = 01
+            end
+        End
+  END
+/* end of update_policy_files */
+End
+
+
+Procedure DELETE_TRANSACTION
+Begin
+/* update policy files from appropriate transaction*/
+
+Access SFPPOINT_ALIAS, Set SFPPOINT_ALIAS:POLICY_NO = SFPPOINT:POLICY_NO,
+                           SFPPOINT_ALIAS:POL_YEAR = G_YEAR, Generic
+
+If --SECURITY >= 90 And
+   L_CONVERTED = "N" Then
+    Begin
+    Do DELETE_SFP_FILES
+    End
+Else
+    If L_CONVERTED = "Y" Then
+        Error "Policy already updated, can not delete"
+--    Else
+--        If SECURITY < 90 Then
+--            Error "You do not have access to delete"
+
+/* end of delete transaction */
+End
+
+Procedure UPDATE_QUOTE_FILES
+Begin
+/* update appropriate quote files */
+
+Access SFPPOINT_ALIAS, Set SFPPOINT_ALIAS:POLICY_NO = SFPPOINT:POLICY_NO, Generic
+
+Repeat Begin
+    Exit If SFPPOINT_ALIAS:POLICY_NO <> SFPPOINT:POLICY_NO
+
+    G_POLICY_NO = SFPPOINT_ALIAS:POLICY_NO
+    G_YEAR = SFPPOINT_ALIAS:POL_YEAR
+    G_END_SEQUENCE = SFPPOINT_ALIAS:END_SEQUENCE
+    Next SFPPOINT_ALIAS
+    End
+
+L_QUOTE_CONVERT = Str(G_POLICY_NO,9) + " " + Str(G_YEAR,4) + " " + Str(G_END_SEQUENCE,4)
+                  + " " + Str(G_NEW_QUOTE_NO,8)
+
+If SFSCOMPANY:DEBUG_MODE = 0 Then
+    Begin
+    Switch(SFSLINE:LOB_CODE)
+      Case "BOP"      : Begin
+                        Proc ("cli csbatch bopcv200 %s",L_QUOTE_CONVERT)/noconsole -- businessowners
+                        End
+      Case "SCP"      : Begin
+                        Proc ("cli csbatch scpcv200 %s",L_QUOTE_CONVERT)/noconsole -- businessowners
+                        End
+      Case "SMP",
+           "PROPERTY",
+           "LIABILITY",
+           "LIQUOR",
+           "FARMFIRE",
+           "CINLAND",
+           "ARTISAN"  : Begin
+                        Proc ("cli csbatch cppcv200 %s",L_QUOTE_CONVERT)/noconsole -- businessowners
+                        Proc ("cli csbatch cppcv200a %s",L_QUOTE_CONVERT)/noconsole -- businessowners
+                        Proc ("cli csbatch cppcv200c %s",L_QUOTE_CONVERT)/noconsole -- businessowners
+                        End
+      Case "UMBRELLA" : Begin
+                        Proc ("cli csbatch cupcv200 %s",L_QUOTE_CONVERT)/noconsole -- auto
+                        End
+      Case "PINLAND"  : Begin
+                        Proc ("cli csbatch impcv200 %s",L_QUOTE_CONVERT)/noconsole -- auto
+                        End
+      Case "AUTO"     : Begin
+                        Proc ("cli csbatch capcv200 %s",L_QUOTE_CONVERT)/noconsole -- auto
+                        End
+      Case "PAUTO"     : Begin
+                        Proc ("cli csbatch papcv200 %s",L_QUOTE_CONVERT)/noconsole -- auto
+                        End
+      Case "PUMBRELLA" : Begin
+                         Proc ("cli csbatch dlpcv200 %s",L_QUOTE_CONVERT)/noconsole -- auto
+                         End
+      Case "FARM"      : Begin
+                         Proc ("cli csbatch flpcv200 %s",L_QUOTE_CONVERT)/noconsole -- auto
+                         End
+      Case "RENTAL"    : Begin
+                         Proc ("cli csbatch rlpcv200 %s",L_QUOTE_CONVERT)/noconsole -- auto
+                         End
+      Case "CHURCH"    : Begin
+                         Proc ("cli csbatch chpcv200 %s",L_QUOTE_CONVERT)/noconsole -- auto
+                         End
+      Case "WORK"      : Begin
+                         Proc ("cli csbatch wcpcv200 %s",L_QUOTE_CONVERT)/noconsole -- auto
+                         End
+      Case "BOAT"      : Begin
+                         Proc ("cli csbatch pcpcv200 %s",L_QUOTE_CONVERT)/noconsole -- auto
+                         End
+      Case "HOME",
+           "PAK",
+           "SPECIAL",
+           "DWELLING",
+           "MOBILE",
+           "COMPLIAB",
+           "COMMRISK",
+           "POULTRY",
+           "REGFARM"    : Begin
+                                   Proc ("cli csbatch plpcv200 %s",L_QUOTE_CONVERT)/noconsole -- personal lines
+                          End
+      case "CPORTFOLIO" : begin
+                          Proc ("cli csbatch bopcv200 %s",L_QUOTE_CONVERT)/noconsole -- businessowners
+                          Proc ("cli csbatch cppcv200 %s",L_QUOTE_CONVERT)/noconsole -- businessowners
+                          Proc ("cli csbatch cppcv200a %s",L_QUOTE_CONVERT)/noconsole -- businessowners
+                          Proc ("cli csbatch cppcv200c %s",L_QUOTE_CONVERT)/noconsole -- businessowners
+                          Proc ("cli csbatch cupcv200 %s",L_QUOTE_CONVERT)/noconsole -- auto
+                          Proc ("cli csbatch capcv200 %s",L_QUOTE_CONVERT)/noconsole -- auto
+                          Proc ("cli csbatch wcpcv200 %s",L_QUOTE_CONVERT)/noconsole -- auto
+                          end
+      End
+    End
+Else
+    Begin
+    Switch(SFSLINE:LOB_CODE)
+      Case "BOP"      : Begin
+                        Proc ("cli csbatch bopcv200 %s",L_QUOTE_CONVERT) -- businessowners
+                        End
+      Case "SCP"      : Begin
+                        Proc ("cli csbatch scpcv200 %s",L_QUOTE_CONVERT) -- businessowners
+                        End
+      Case "SMP" ,
+           "PROPERTY",
+           "LIABILITY",
+           "LIQUOR",
+           "FARMFIRE",
+           "CINLAND",
+           "ARTISAN"  : Begin
+                        Proc ("cli csbatch cppcv200 %s",L_QUOTE_CONVERT) -- businessowners
+                        Proc ("cli csbatch cppcv200a %s",L_QUOTE_CONVERT) -- businessowners
+                        Proc ("cli csbatch cppcv200c %s",L_QUOTE_CONVERT) -- businessowners
+                        End
+      Case "UMBRELLA" : Begin
+                        Proc ("cli csbatch cupcv200 %s",L_QUOTE_CONVERT) -- auto
+                        End
+      Case "PINLAND"  : Begin
+                        Proc ("cli csbatch impcv200 %s",L_QUOTE_CONVERT) -- auto
+                        End
+      Case "AUTO"     : Begin
+                        Proc ("cli csbatch capcv200 %s",L_QUOTE_CONVERT) -- auto
+                        End
+      Case "PAUTO"     : Begin
+                        Proc ("cli csbatch papcv200 %s",L_QUOTE_CONVERT) -- auto
+                        End
+      Case "PUMBRELLA" : Begin
+                         Proc ("cli csbatch dlpcv200 %s",L_QUOTE_CONVERT) -- auto
+                         End
+      Case "FARM"      : Begin
+                         Proc ("cli csbatch flpcv200 %s",L_QUOTE_CONVERT) -- auto
+                         End
+      Case "RENTAL"    : Begin
+                         Proc ("cli csbatch rlpcv200 %s",L_QUOTE_CONVERT) -- auto
+                         End
+      Case "CHURCH"    : Begin
+                         Proc ("cli csbatch chpcv200 %s",L_QUOTE_CONVERT) -- auto
+                         End
+      Case "WORK"      : Begin
+                         Proc ("cli csbatch wcpcv200 %s",L_QUOTE_CONVERT) -- auto
+                         End
+      Case "BOAT"      : Begin
+                         Proc ("cli csbatch pcpcv200 %s",L_QUOTE_CONVERT) -- auto
+                         End
+      Case "HOME",
+           "PAK",
+           "SPECIAL",
+           "DWELLING",
+           "MOBILE",
+           "COMPLIAB",
+           "COMMRISK",
+           "POULTRY",
+           "REGFARM"   : Begin
+                           Proc ("cli csbatch plpcv200 %s",L_QUOTE_CONVERT) -- personal lines
+                         End
+      case "CPORTFOLIO" : begin
+                          Proc ("cli csbatch bopcv200 %s",L_QUOTE_CONVERT)
+                          Proc ("cli csbatch cppcv200 %s",L_QUOTE_CONVERT)
+                          Proc ("cli csbatch cppcv200a %s",L_QUOTE_CONVERT)
+                          Proc ("cli csbatch cppcv200c %s",L_QUOTE_CONVERT)
+                          Proc ("cli csbatch cupcv200 %s",L_QUOTE_CONVERT)
+                          Proc ("cli csbatch capcv200 %s",L_QUOTE_CONVERT)
+                          Proc ("cli csbatch wcpcv200 %s",L_QUOTE_CONVERT)
+                          end
+      End
+    End
+
+/* end of update_quote_files */
+End
+
+procedure update_sfppolicy
+
+begin
+if g_opt one of 1, 4, 5 then
+  begin
+    g_company_id = sfpname:company_id
+    if g_opt = 1 then
+        g_scan = 1
+    else
+        g_scan = 0
+    g_copy_name = ""
+    display modal screen "sfppr400"
+    with initial function "ADD|BACK"
+    end
+
+if g_opt not one of 10, 11 then
+  begin
+    proc("cli sfppolicy.mk")/noconsole
+    l_username = username
+    access sfppolicy,
+       set sfppolicy:user_id          = l_username,
+           sfppolicy:line_of_business = sfpname:line_of_business, generic
+
+    access sfpname,
+       set sfpname:policy_no    = sfppoint:policy_no,
+           sfpname:pol_year     = sfppoint:pol_year,
+           sfpname:end_sequence = sfppoint:end_sequence, generic
+
+    if sfppolicy:user_id          <> l_username or
+       sfppolicy:line_of_business <> sfpname:line_of_business then
+        begin
+        add sfppolicy
+            begin
+            sfppolicy:user_id                   = l_username/raw
+            sfppolicy:line_of_business          = sfpname:line_of_business
+            sfppolicy:policy_no                 = sfppoint:policy_no
+            sfppolicy:pol_Year                  = g_year
+            sfppolicy:end_sequence              = g_end_sequence
+            sfppolicy:copy_name                 = g_copy_name/raw
+            sfppolicy:company_id                = sfpname:company_id/raw
+            if g_opt one of 1, 3 or
+               g_scan = 1 then
+                sfppolicy:scan_home_office_copy = 1
+            end
+        end
+    else
+        begin
+        delete sfppolicy
+        add sfppolicy
+            begin
+            sfppolicy:user_id                   = l_username/raw
+            sfppolicy:line_of_business          = sfpname:line_of_business
+            sfppolicy:policy_no                 = sfppoint:policy_no
+            sfppolicy:pol_Year                  = g_year
+            sfppolicy:end_sequence              = g_end_sequence
+            sfppolicy:copy_name                 = ""/raw
+            sfppolicy:company_id                = sfpname:company_id/raw
+            if g_opt one of 1, 3 or
+               g_scan = 1 then
+                sfppolicy:scan_home_office_copy = 1
+            end
+
+        end
+
+    end
+
+end
+
+/*Procedure CREATE_MACRO
+
+Begin
+Do REFRESH_WORK_FILES
+L_CSEXEC_APPLICATION = "PRINT"/raw
+
+Access SFSCSEXEC,
+   Set SFSCSEXEC:APPLICATION = L_CSEXEC_APPLICATION , Exact
+
+If SFSCSEXEC:APPLICATION_NUMBER = 0 Then
+  Begin
+    L_CSEXEC_NUMBER = 99999
+  End
+Else
+  Begin
+    L_CSEXEC_NUMBER = SFSCSEXEC:APPLICATION_NUMBER + 1
+
+    Change SFSCSEXEC
+        Begin
+        SFSCSEXEC:APPLICATION_NUMBER = L_CSEXEC_NUMBER
+        End
+    End
+
+access sfsline,
+   set sfsline:company_Id       = sfpname:company_id,
+       sfsline:line_of_business = sfpname:line_of_business,
+       sfsline:lob_subline      = "00", generic
+
+switch(sfsline:lob_code)
+  case "DWELLING", "MOBILE", "HOME" : begin
+                                      I_REPORTA    = "plppr400"
+                                      I_REPORT     = "plppr400.cq"
+                                      I_REPORT_CQE = "plppr400.cqe"
+                                      I_APP        = "plp"
+                                      end
+  case "BOP"                        : begin
+                                      I_REPORTA    = "boppr400"
+                                      I_REPORT     = "boppr400.cq"
+                                      I_REPORT_CQE = "boppr400.cqe"
+                                      I_APP        = "bop"
+                                      end
+  case "BOAT"                       : begin
+                                      I_REPORTA    = "pcppr400"
+                                      I_REPORT     = "pcppr400.cq"
+                                      I_REPORT_CQE = "pcppr400.cqe"
+                                      I_APP        = "pcp"
+                                      end
+
+  case "ARTISAN"                    : begin
+                                      I_REPORTA    = "cppiso100"
+                                      I_REPORT     = "cppiso100.cq"
+                                      I_REPORT_CQE = "cppiso100.cqe"
+                                      I_APP        = "cpp"
+                                      end
+
+  end
+
+L_USERNAME = USERNAME
+I_CSEXEC_NUMBER = L_CSEXEC_NUMBER
+L_DEC = L_APP+Str(I_CSEXEC_NUMBER)+".cq"
+L_DEC_PDF = L_APP+Str(I_CSEXEC_NUMBER)+".pdf"
+I_PARAMETER = I_APP+Str(I_CSEXEC_NUMBER)+".par"
+I_MACROA = I_APP+Str(I_CSEXEC_NUMBER)
+I_MACRO = I_APP+Str(I_CSEXEC_NUMBER)+".mf"
+
+access sfpprint8,
+   set sfpprint8:policy_no    = g_policy_no,
+       sfpprint8:pol_year     = g_year,
+       sfpprint8:end_sequence = g_end_sequence, generic
+
+if sfpprint8:policy_no    <> g_policy_no and
+   sfpprint8:pol_year     <> g_year and
+   sfpprint8:end_sequence <> g_end_sequence then
+  begin
+    Add sfpprint8
+      Begin
+        sfpprint8:policy_NO    = G_policy_NO
+        sfpprint8:pol_year     = g_year
+        sfpprint8:end_sequence = g_end_sequence
+      end
+  End
+else
+  begin
+    delete sfpprint8
+    Add sfpprint8
+      Begin
+        sfpprint8:policy_NO    = G_policy_NO
+        sfpprint8:pol_year     = g_year
+        sfpprint8:end_sequence = g_end_sequence
+      end
+    End
+if sfsline:LOB_CODE one of "ARTISAN" then
+  {
+    Deletefile(I_MACRO)
+    Writefile(I_MACRO,"cli rm cppiso100.cq<nl>")
+    Writefile(I_MACRO,"cli csbatch cppiso100<nl>")
+    Writefile(I_MACRO,"cli pcl2pdf cppiso100.cq %s<nl>",l_dec)
+    Closefile(I_MACRO)
+  }
+else
+  {
+    Deletefile(I_MACRO)
+    Writefile(I_MACRO,"clear list<nl>")
+    Writefile(I_MACRO,"clear find<nl>")
+    Writefile(I_MACRO,"clear sum<nl>")
+    Writefile(I_MACRO,"run %s<nl>",i_reporta)
+    Writefile(I_MACRO,"cli rm %s<nl>",i_report)
+    Writefile(I_MACRO,"rsave %s<nl>",i_reporta)
+    Writefile(I_MACRO,"cli joinit %s %s<nl>",i_report,L_DEC)
+    Closefile(I_MACRO)
+  }
+If SFSCOMPANY:DEBUG_MODE = 0 Then
+    Proc("cli cq %s",I_MACRO)/noconsole
+Else
+    Proc("cli cq %s",I_MACRO)
+
+L_USERNAME = Trun(USERNAME)
+
+Access SFSPROFILE,
+   Set SFSPROFILE:USER_ID = L_USERNAME, Exact
+
+If SFSPROFILE:USER_ID <> L_USERNAME Then
+  Begin
+    L_USERNAME = "default"
+    Access SFSPROFILE,
+       Set SFSPROFILE:USER_ID = L_USERNAME, Exact
+  End
+
+L_UNIX_PATH   = SFSPROFILE:UNIX_PATH/raw
+L_UNIX_SERVER = SFSPROFILE:UNIX_SERVER/raw
+L_CLIENT_PATH = SFSPROFILE:CLIENT_PATH/raw
+
+
+If SFSCOMPANY:DEBUG_MODE = 0 Then
+  Begin
+    Proc("cli mv %s %s",L_DEC,L_DEC_PDF)/noconsole
+    Proc("cli chmod 777 %s ",L_DEC_PDF)/noconsole
+    Proc("cli rm %s",L_DEC)/noconsole
+    Proc("cli mv %s %s %s", L_DEC_PDF," ",Trun(L_UNIX_PATH))/noconsole
+  End
+Else
+  Begin
+    Proc("cli mv %s %s",L_DEC,L_DEC_PDF)
+    Proc("cli chmod 777 %s ",L_DEC_PDF)
+    Proc("cli rm %s",L_DEC)
+    Proc("cli mv %s %s %s", L_DEC_PDF," ",Trun(L_UNIX_PATH))
+  End
+
+Proc("%s %s%s",L_CLIENT_PATH,Trun(L_UNIX_SERVER),Trun(L_DEC_PDF))/client/noconsole
+
+access sfpprint8,
+   set sfpprint8:policy_no    = g_policy_no,
+       sfpprint8:pol_Year     = g_year,
+       sfpprint8:end_sequence = g_end_sequence, generic
+
+--delete sfpprint8
+
+--Do REFRESH_WORK_FILES
+
+End*/
+
+/*Procedure REFRESH_WORK_FILES
+
+Begin
+  Proc ("cli sfpprint8.mk")/noconsole
+End*/
+
+End

@@ -1,0 +1,102 @@
+%%
+Program
+        Name = "sfpendcnv"
+        Type = "File" ;
+        Domain = "sfpend" ;
+
+        Number COUNTER = 0;
+        String l_form_edition[25];
+        String l_found[1];
+        String l_company_id[10];
+        String l_sfs[3]="SFS";
+        Unsigned ASCII number l_line_of_business[4];
+              
+Screen Entry
+
+Update
+
+COUNTER = COUNTER + 1
+
+If COUNTER = 1 Then
+Begin
+    Write ("<014>")
+End
+
+write ("%c%s%n",01001,"Counter     = ",counter)
+
+Do UPDATE_sfpend
+
+Screen Exit
+
+Write ("%c%s%n",15001,"Update is Compete......",COUNTER)
+
+Procedure Definition
+
+Procedure UPDATE_sfpend
+{
+
+l_found = "N"
+
+access sfsdefault, set sfsdefault:sfs_code = l_sfs
+
+l_company_id = sfsdefault:company_id 
+
+-- sfpend key  POLICY_NO+POL_YEAR+END_SEQUENCE+PREM_NO+BUILD_NO+SUB_CODE
+
+-- sfsoptend key COMPANY_ID+STATE+LINE_OF_BUSINESS+CODE+EFF_DATE 
+
+-- sfpmaster key POLICY_NO+POL_YEAR+END_SEQUENCE
+
+access sfpmaster, set sfpmaster:policy_no    = sfpend:policy_no, 
+                      sfpmaster:pol_year     = sfpend:pol_year, 
+                      sfpmaster:end_sequence = sfpend:end_sequence
+
+access sfpname,   set sfpname:policy_no      = sfpend:policy_no, 
+                      sfpname:pol_year       = sfpend:pol_year, 
+                      sfpname:end_sequence   = sfpend:end_sequence
+
+l_line_of_business = sfpname:line_of_business 
+
+access sfsoptend, set sfsoptend:company_id       = l_company_id, 
+                      sfsoptend:state            = sfpmaster:state,
+                      sfsoptend:line_of_business = l_line_of_business,
+                      sfsoptend:code             = sfpend:code, generic
+
+while sfsoptend:company_id       = l_company_id and 
+      sfsoptend:line_of_business = l_line_of_business and 
+      sfsoptend:code             = sfpend:code and 
+      l_found                    = "N"
+      {
+         if sfsoptend:exp_date = 00.00.0000 then
+         {
+           l_form_edition = sfsoptend:form_edition
+           l_found        = "Y"
+         }
+         next sfsoptend
+      }
+    
+access sfpend_alt, set sfpend_alt:policy_no    = sfpend:policy_no, 
+                       sfpend_alt:pol_year     = sfpend:pol_year,
+                       sfpend_alt:end_sequence = sfpend:end_sequence, 
+                       sfpend_alt:prem_no      = sfpend:prem_no,
+                       sfpend_alt:build_no     = sfpend:build_no,
+                       sfpend_alt:sub_code     = sfpend:sub_code 
+
+if sfpend_alt:policy_no    = sfpend:policy_no and 
+   sfpend_alt:pol_year     = sfpend:pol_year and 
+   sfpend_alt:end_sequence = sfpend:end_sequence and 
+   sfpend_alt:prem_no      = sfpend:prem_no and
+   sfpend_alt:build_no     = sfpend:build_no and 
+   sfpend_alt:sub_code     = sfpend:sub_code  then 
+{
+  change sfpend_alt
+  {
+     sfpend_alt:form_edition  = l_form_edition
+     sfpend_alt:expansion     = "XXXXXX"
+     write ("%c%s",05001,"I am here in change")
+  } -- end of adding record
+} -- end of record exist checking
+
+} -- end of procedure
+
+End

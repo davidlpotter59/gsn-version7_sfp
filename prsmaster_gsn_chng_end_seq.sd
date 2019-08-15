@@ -1,0 +1,91 @@
+%%
+Program
+        Name = "prsmaster_change_end_sequence" ;
+        Type = "File" ;
+        padcharacter = space;
+        Domain = "dummy" ;
+
+        unsigned ascii Number l_COUNTER = 0;
+        Unsigned Ascii Number L_policy_no[9]=0;
+        unsigned Ascii Number l_line_of_business[4] = 9,
+                              l_end_sequence_before[4],
+                              l_end_sequence[4];
+        wdate l_starting_date,
+              l_ending_date;
+        String L_COMPANY_ID[10]="GGUND     ",
+               l_enter[1];
+
+initialization
+  l_STARTING_DATE = Date(COMMANDLINE[1,8])
+  l_ENDING_DATE   = Date(COMMANDLINE[9,16])
+  Do UPDATE_PRSMASTER
+
+Update
+
+Screen Exit
+
+Procedure Definition
+
+Procedure UPDATE_PRSMASTER
+
+Begin
+  Access prsmaster,
+     Set prsmaster:COMPANY_ID = L_COMPANY_ID, approximate
+
+  l_counter = 0
+
+  while prsmaster:errornumber = 0
+    {
+      if ((prsmaster:trans_date < l_starting_date and
+           prsmaster:trans_eff => l_starting_date and
+           prsmaster:trans_eff <= l_ending_date) or
+          (prsmaster:trans_date => l_starting_date and
+           prsmaster:trans_date <= l_ending_date and
+           prsmaster:trans_eff <= l_ending_date)) and
+           prsmaster:trans_code < 17 and
+           prsmaster:trans_code not one of 10,14 and
+           prsmaster:end_sequence = 0 then
+        {
+          access sfpmaster,
+             set sfpmaster:policy_no = prsmaster:policy_no,
+                 sfpmaster:pol_year  = prsmaster:pol_year, generic
+
+          while sfpmaster:policy_no = prsmaster:policy_no and
+                sfpmaster:pol_year  = prsmaster:pol_year
+            {
+              if sfpmaster:policy_no          = prsmaster:policy_no and
+                 sfpmaster:pol_year           = prsmaster:pol_year and
+                 sfpmaster:premium_trans_date = prsmaster:trans_date and
+                 sfpmaster:trans_eff          = prsmaster:trans_eff and
+                 sfpmaster:trans_code         = prsmaster:trans_code and
+                 sfpmaster:trans_exp          = prsmaster:trans_exp then
+                {
+                  l_end_sequence = sfpmaster:end_sequence
+                  if prsmaster:end_sequence = 0 then
+                    {
+                      access prsmaster_alt,
+                         set prsmaster_alt:company_id = prsmaster:company_id,
+                             prsmaster_alt:POLICY_NO  = prsmaster:policy_no,
+                             prsmaster_alt:SUB_CODE   = prsmaster:sub_code, exact
+                      CHANGE PRSMASTER_ALT
+                        Begin
+                          Write ("<014>")
+                          prsmaster_alt:end_sequence = l_end_sequence
+                          l_COUNTER = l_COUNTER + 1
+--                          if l_end_sequence > 1 then
+                            {
+                              write("%c%x<--->%x",04001,prsmaster:trans_date,prsmaster:trans_code)
+                              write ("%c%n%s%n%x%x %n times",05001,prsmaster_alt:policy_no," is changed from ", l_end_sequence_before, " to ",prsmaster_alt:end_sequence,l_counter)
+                             -- Read (23,1,"Press Enter to Continue ",L_ENTER,1)
+                            }
+                        end
+                    }
+                }
+              next sfpmaster
+            } -- end while sfpmaster
+        } --if prsmaster
+      Next PRSMASTER
+    }   --while statement
+End --procedure
+
+End --screen exit

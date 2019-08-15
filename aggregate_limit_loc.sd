@@ -1,0 +1,123 @@
+Cyberscreen System                                     Function [____________]
+Screen 1. AGGREGATE-LIMIT-LOC Update Screen
+ 1. Company Id:                  __________ 20. Contents Value:      ________
+ 2. Policy Number:               _________  21. Contents Limit:      ________
+ 3. Location No:                      ____  22. Contents Deductable: ________
+ 4. Building No:                      ____  23. Ale Bi Value:        ________
+ 5. Address: __________________________________________________
+ 6. City:                        ______________________________
+ 7. State:                       __
+ 8. Zip Code:                    __________
+ 9. Construction Code:                   _
+10. Class Code:                      _____
+11. Year Of Construction:             ____  24. Ale Bi Limit:        ________
+12. Site Limit:                       ____  25. Ale Bi Deductible:   ________
+13. Site Deductable:                  ____  26. Property Premium: __________
+14. Building Value:               ________  27. Transaction Date: __________
+15. Building Limit:               ________  28. County:                 ____
+16. Building Deductable:             _____  29. Distance to Shore:        __
+17. Other Structures Value:       ________
+18. Other Structures Limit:       ________
+19. Other Structures Deductible:      ____
+%%
+Screen
+        Name = "Aggregate_Limit_Loc" ;
+        Type = "Detail" ;
+        padcharacter = space ;
+        highlight = underscore;
+        errortype  = nolock;
+        domain = "aggregate_limit_loc";
+
+        Global String G_COMPANY_ID[10] ;
+        Global Unsigned Ascii Number G_POLICY_NO[9] ;
+        Global Unsigned Ascii Number G_PREM_NO[4] ;
+        Global Unsigned Ascii Number G_BUILD_NO[4] ;
+
+        --Access AGGREGATE_LIMIT_LOC,
+        --   Set AGGREGATE_LIMIT_LOC:COMPANY_ID = G_COMPANY_ID ,
+            --   AGGREGATE_LIMIT_LOC:POLICY_NO = G_POLICY_NO, generic 
+               --AGGREGATE_LIMIT_LOC:PREM_NO = G_PREM_NO ,
+               --AGGREGATE_LIMIT_LOC:BUILD_NO = G_BUILD_NO ;
+
+           
+        Include "STDKEYS.INC"
+
+Functions
+        Add;            /* Add a record */
+        Change;         /* Change an existing record */
+        Delete;         /* Delete an existing record */
+
+        Find ;          /* Select a record using an exact key */
+        Search;         /* Select a record using an approximate key */
+        Next;           /* Display the next record(s) in key sequence */
+        Previous;       /* Display the previous record(s) in key sequence */
+        View;           /* View the contents of freetext fields */
+
+        Page/noreturn;  /* Display a different page - no going back */
+
+"Back"  Return;         /* Back to previous screen */
+"Exit"  Return;
+        Return;
+
+"Bye"   Stop;           /* Terminate this session */
+        Stop;
+
+        Print;          /* Print the screen on the default printer */
+"Cq"    Proc "CQ";      /* Enter Cyberquery */
+"Cli"   Proc ":CLI";    /* Push to the CLI */
+
+Fields
+        FUNCTION ;
+301     AGGREGATE_LIMIT_LOC:COMPANY_ID          Mandatory
+        include "companyhlp.inc"
+401     AGGREGATE_LIMIT_LOC:POLICY_NO           Mandatory;
+501     AGGREGATE_LIMIT_LOC:PREM_NO;             
+601     AGGREGATE_LIMIT_LOC:BUILD_NO;
+701     AGGREGATE_LIMIT_LOC:ADDRESS;
+801     AGGREGATE_LIMIT_LOC:CITY;
+901     AGGREGATE_LIMIT_LOC:STR_STATE;
+1001    AGGREGATE_LIMIT_LOC:ZIP_CODE;
+1101    AGGREGATE_LIMIT_LOC:CONSTRUCTION_CODE;
+1201    AGGREGATE_LIMIT_LOC:CLASS_CODE;
+1301    AGGREGATE_LIMIT_LOC:YEAR_OF_CONSTRUCTION;
+1401    AGGREGATE_LIMIT_LOC:SITE_LIMIT;
+1501    AGGREGATE_LIMIT_LOC:SITE_DEDUCTABLE;
+1601    AGGREGATE_LIMIT_LOC:BUILDING_VALUE;
+1701    AGGREGATE_LIMIT_LOC:BUILDING_LIMIT;
+1801    AGGREGATE_LIMIT_LOC:BUILDING_DEDUCTABLE;
+1901    AGGREGATE_LIMIT_LOC:OTHER_STRUCTURES_VALUE;
+2001    AGGREGATE_LIMIT_LOC:OTHER_STRUCTURES_LIMIT;
+2101    AGGREGATE_LIMIT_LOC:OTHER_STRUCTURES_DEDUCTIBLE;
+302     AGGREGATE_LIMIT_LOC:CONTENTS_VALUE;
+402     AGGREGATE_LIMIT_LOC:CONTENTS_LIMIT;
+502     AGGREGATE_LIMIT_LOC:CONTENTS_DEDUCTABLE;
+602     AGGREGATE_LIMIT_LOC:ALE_BI_VALUE;
+1302    AGGREGATE_LIMIT_LOC:ALE_BI_LIMIT;
+1402    AGGREGATE_LIMIT_LOC:ALE_BI_DEDUCTIBLE;
+1502    AGGREGATE_LIMIT_LOC:PROPERTY_PREMIUM;
+1602    AGGREGATE_LIMIT_LOC:TRANS_DATE;
+1702    AGGREGATE_LIMIT_LOC:COUNTY
+        Error 1222 when SFSSTATE:DESCRIPTION = " "
+        Activehelp if sfsstate:county <> 0 then
+                       SFSSTATE:COUNTY
+                   else
+                       null/width=3/heading="County",
+                   if sfsstate:county <> 0 then
+                       SFSSTATE:DESCRIPTION
+                   else
+                       null/width=30/heading="Description" ;
+ 
+1802    AGGREGATE_LIMIT_LOC:DISTANCE_TO_SHORE;
+
+Screen Exit
+        If AGGREGATE_LIMIT_LOC:COMPANY_ID > "" 
+        Then G_COMPANY_ID = AGGREGATE_LIMIT_LOC:COMPANY_ID ;
+        If AGGREGATE_LIMIT_LOC:POLICY_NO > 0 
+        Then G_POLICY_NO = AGGREGATE_LIMIT_LOC:POLICY_NO ;
+        If AGGREGATE_LIMIT_LOC:PREM_NO > 0 
+        Then G_PREM_NO = AGGREGATE_LIMIT_LOC:PREM_NO ;
+        If AGGREGATE_LIMIT_LOC:BUILD_NO > 0 
+        Then G_BUILD_NO = AGGREGATE_LIMIT_LOC:BUILD_NO ;
+
+
+End

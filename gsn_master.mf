@@ -1,0 +1,5 @@
+clear list
+clear find
+clear sum
+
+run gsn_master.eq

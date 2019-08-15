@@ -1,0 +1,47 @@
+%%
+Program
+        Name = "sfppointcnv"
+        Type = "File" ;
+        Domain = "sfppoint" ;
+
+        Number COUNTER = 0;
+              
+Screen Entry
+
+Update
+
+COUNTER = COUNTER + 1
+
+If COUNTER = 1 Then
+Begin
+    Write ("<014>")
+End
+
+write ("%c%s%n",01001,"Counter     = ",counter)
+
+Do UPDATE_SFPPOINT
+
+Screen Exit
+
+Write ("%c%s%n",15001,"Update is Compete......",COUNTER)
+
+Procedure Definition
+
+Procedure UPDATE_SFPPOINT
+{
+
+access sfppoint_alt, set sfppoint_alt:policy_no    = sfppoint:policy_no, 
+                         sfppoint_alt:pol_year     = sfppoint:pol_year
+
+if sfppoint_alt:policy_no   = sfppoint:policy_no and 
+   sfppoint_alt:pol_year    = sfppoint:pol_year then 
+{
+  change sfppoint_alt
+  {
+     sfppoint_alt:old_company = 1 
+  } -- end of adding record
+} -- end of record exist checking
+
+} -- end of procedure
+
+End

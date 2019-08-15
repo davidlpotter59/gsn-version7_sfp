@@ -1,0 +1,297 @@
+%%                                  
+/*
+Date Written: 09/12/2011
+
+Name: balance_master
+
+Copyright (c) 2011, SCIPS.com Inc.
+
+Modify
+Date                   By                  Comment
+--------------------------------------------------------------
+09/12/2011            REL                 This program is for the interface with gsn.  i
+                                          It will collect all field that gsn needs by policy_no on a location basis.
+==============================================================
+*/
+
+Program
+  Name = "balance_master";
+  Type = "File";
+  Domain = "dummy";
+  Padcharacter = Space;
+
+  string l_company_id[10]="GGUND     ",
+         l_enter[1];
+
+  unsigned ascii number l_policy_no[9]=0/decimals=0,
+                        l_counter[9]=0/decimals=0,
+                        l_difference_used[1]=0/decimals=0;
+
+  signed ascii number l_difference[9]=0.00/decimals=2;
+
+  wdate l_starting_date,
+        l_ending_date;
+
+  unsigned ascii number l_run_mode[1]=0;
+
+initialization
+
+  l_starting_date = date(commandline[1,8])
+  l_ending_date   = date(commandline[9,16])
+  l_run_mode      = val(commandline[18,18])
+
+-- l_run_mode is used to update the gsn_master totals and prsmaster totals
+-- without updating the gsn_master with the difference
+
+  write ("<014>")
+  write ("%c%s%d",01001,"Starting Date = ",l_starting_date)
+  write ("%c%s%d",03001,"Ending Date   = ",l_ending_date)
+  write ("%c%s%n",05001,"Run Mode      = ",l_run_mode)
+  write ("%c%s",  07001,"Testing Mode ")
+  read (23,1,"Press Enter ",l_enter,1)
+
+  do add_gsn_master
+  do add_premium_master
+  if l_run_mode = 1 then
+  {
+    do balance_matching_records
+  }
+
+update
+
+screen exit
+
+procedure definition
+
+procedure add_gsn_master
+{
+
+write ("<014>")
+
+
+l_policy_no = 0
+l_counter = 0
+
+access gsn_master, set gsn_master:policy_no = l_policy_no, approximate
+
+while gsn_master:errornumber = 0
+{
+
+ l_counter = l_counter + 1
+ if l_counter mod 100 = 0 then
+ {
+    write ("%c%s%n",05001,"GSN_MASTER_COUNTER    = ",l_counter)
+ }
+
+ access gsn_master_balance, set gsn_master_balance:policy_no        = gsn_master:policy_no,
+                                 gsn_master_balance:pol_year         = gsn_master:pol_year,
+                                 gsn_master_balance:end_sequence     = gsn_master:end_sequence,
+                                 gsn_master_balance:line_of_business = gsn_master:line_of_business,
+                                 gsn_master_balance:lob_subline      = gsn_master:lob_subline
+
+ if gsn_master_balance:policy_no        <> gsn_master:policy_no or
+    gsn_master_balance:pol_year         <> gsn_master:pol_year or
+    gsn_master_balance:end_sequence     <> gsn_master:end_sequence or
+    gsn_master_balance:line_of_business <> gsn_master:line_of_business or
+    gsn_master_balance:lob_subline      <> gsn_master:lob_subline then
+    {
+      add gsn_master_balance
+      {
+         gsn_master_balance:policy_no           = gsn_master:policy_no
+         gsn_master_balance:pol_year            = gsn_master:pol_year
+         gsn_master_balance:end_sequence        = gsn_master:end_sequence
+         gsn_master_balance:line_of_business    = gsn_master:line_of_business
+         gsn_master_balance:lob_subline         = gsn_master:lob_subline
+         gsn_master_balance:gsn_master_premium = gsn_master:premium
+      }
+    }
+    else
+    {
+    change gsn_master_balance
+    {
+       gsn_master_balance:gsn_master_premium = gsn_master_balance:gsn_master_premium + gsn_master:premium
+    }
+    }
+
+       next gsn_master
+
+    } -- end of while
+
+} -- end of Procedure
+
+procedure add_premium_master
+{
+
+l_company_id = "GGUND     "
+l_policy_no  = 0
+
+access prsmaster, set prsmaster:company_id = l_company_id,
+                      prsmaster:policy_no = l_policy_no, approximate
+
+while prsmaster:errornumber = 0
+{
+
+ if ((prsmaster:trans_date => l_starting_date and
+      prsmaster:trans_date <= l_ending_date and
+      prsmaster:trans_eff  <= l_ending_date) or
+     (prsmaster:trans_eff  => l_starting_date and
+      prsmaster:trans_eff  <= l_ending_date and
+      prsmaster:trans_date  < l_starting_date)) and
+      prsmaster:trans_code < 17 then
+ {
+ l_counter = l_counter + 1
+ if l_counter mod 100 = 0 then
+ {
+    write ("%c%s%n",07001,"PRSMASTER_COUNTER    = ",l_counter)
+ }
+
+ access gsn_master_balance,
+                        set gsn_master_balance:policy_no        = prsmaster:policy_no,
+                            gsn_master_balance:pol_year         = prsmaster:pol_year,
+                            gsn_master_balance:end_sequence     = prsmaster:end_sequence,
+                            gsn_master_balance:line_of_business = prsmaster:line_of_business,
+                            gsn_master_balance:lob_subline      = prsmaster:lob_subline
+
+ if gsn_master_balance:policy_no        <> prsmaster:policy_no or
+    gsn_master_balance:pol_year         <> prsmaster:pol_year or
+    gsn_master_balance:end_sequence     <> prsmaster:end_sequence or
+    gsn_master_balance:line_of_business <> prsmaster:line_of_business or
+    gsn_master_balance:lob_subline      <> prsmaster:lob_subline then
+    {
+      add gsn_master_balance
+      {
+         gsn_master_balance:policy_no          = prsmaster:policy_no
+         gsn_master_balance:pol_year           = prsmaster:pol_year
+         gsn_master_balance:end_sequence       = prsmaster:end_sequence
+         gsn_master_balance:line_of_business   = prsmaster:line_of_business
+         gsn_master_balance:lob_subline        = prsmaster:lob_subline
+         gsn_master_balance:prsmaster_premium  = prsmaster:premium
+      }
+    }
+    else
+    {
+    change gsn_master_balance
+    {
+       gsn_master_balance:prsmaster_premium = gsn_master_balance:prsmaster_premium + prsmaster:premium
+    }
+    }
+    } -- end of date checking
+
+       next prsmaster
+
+    } -- end of while
+
+} -- end of Procedure
+
+Procedure balance_matching_records
+{
+
+l_policy_no = 0
+l_counter = 0
+l_difference = 0
+l_difference_used = 0
+
+read (23,1,"Here I am in Balance Matching Record ",l_enter,1)
+
+access gsn_master_balance, set gsn_master_balance:policy_no = l_policy_no, approximate
+
+while gsn_master_balance:errornumber = 0
+{
+  l_counter = l_counter + 1
+  l_difference_used = 0
+
+  if l_counter mod 100 = 0 then
+  {
+     write ("%c%s%n",09001,"Axis Master Balance ",l_counter)
+  }
+
+  l_difference = gsn_master_balance:prsmaster_premium - gsn_master_balance:gsn_master_premium
+  if l_difference <> 0 then --and
+     --gsn_master_balance:gsn_master_premium <> 0 then
+     {
+       access gsn_master, set gsn_master:policy_no = gsn_master_balance:policy_no,
+                               gsn_master:pol_year  = gsn_master_balance:pol_year,
+                               gsn_master:end_sequence = gsn_master_balance:end_sequence, generic
+       while gsn_master:policy_no = gsn_master_balance:policy_no and
+             gsn_master:pol_year  = gsn_master_balance:pol_year and
+             gsn_master:end_sequence = gsn_master_balance:end_sequence
+       {
+         if  gsn_master:policy_no        = gsn_master_balance:policy_no and
+             gsn_master:line_of_business = gsn_master_balance:line_of_business and
+             gsn_master:lob_subline      = gsn_master_balance:lob_subline then
+              {
+              access gsn_master_alt,
+              set gsn_master_alt:policy_no        = gsn_master:policy_no,
+                  gsn_master_alt:pol_year         = gsn_master:pol_year,
+                  gsn_master_alt:end_sequence     = gsn_master:end_sequence,
+                  gsn_master_alt:prem_no          = gsn_master:prem_no,
+                  gsn_master_alt:build_no         = gsn_master:build_no,
+                  gsn_master_alt:line_of_business = gsn_master:line_of_business,
+                  gsn_master_alt:lob_subline      = gsn_master:lob_subline,
+                  gsn_master_alt:line_type        = gsn_master:line_type,
+                  gsn_master_alt:sub_code         = gsn_master:sub_code, exact
+
+                  if gsn_master_alt:policy_no        = gsn_master:policy_no and
+                     gsn_master_alt:pol_year         = gsn_master:pol_year and
+                     gsn_master_alt:end_sequence     = gsn_master:end_sequence and
+                     gsn_master_alt:prem_no          = gsn_master:prem_no and
+                     gsn_master_alt:build_no         = gsn_master:build_no and
+                     gsn_master_alt:line_of_business = gsn_master:line_of_business and
+                     gsn_master_alt:lob_subline      = gsn_master:lob_subline and
+                     gsn_master_alt:line_type        = gsn_master:line_type and
+                     gsn_master_alt:sub_code         = gsn_master:sub_code then -- good read
+              {
+              if gsn_master_alt:policy_no one of 750001194 then
+              {
+                 write ("<014>")
+                 write ("%c%s%n",01001,"gsn_master_alt:policy_no               = ",gsn_master_alt:policy_no)
+                 write ("%c%s%n",03001,"gsn_master_alt:premium                 = ",gsn_master_alt:premium)
+                 write ("%c%s%n",05001,"l_difference                            = ",l_difference)
+                 write ("%c%s%n",07001,"gsn_master_balance:gsn_master_premium = ",gsn_master_balance:gsn_master_premium)
+                 read (23,1,"Press Enter  Line 249 ",l_enter,1)
+              }
+
+              change gsn_master_alt
+                {
+if gsn_master:policy_no one of 750001194 then
+{
+
+                write ("<014>")
+                write ("%c%s%n",01001,"Policy Number                           = ",gsn_master_alt:policy_no)
+                write ("%c%s%n",02001,"Pol Year                                = ",gsn_master_alt:pol_year)
+                write ("%c%s%n",03001,"End Sequence                            = ",gsn_master_alt:end_sequence)
+                write ("%c%s%n",04001,"Line of Business                        = ",gsn_master_alt:line_of_business)
+                write ("%c%s%s",05001,"LOB Subline                             = ",gsn_master_alt:lob_subline)
+                write ("%c%s%n",06001,"gsn_master_balance:prsmaster_premium   = ",gsn_master_balance:prsmaster_premium)
+                write ("%c%s%n",07001,"gsn_master_balance:gsn_master_premium = ",gsn_master_balance:gsn_master_premium)
+                write ("%c%s%n",08001,"l_difference                            = ",l_difference)
+                read (23,1,"Press enter = Line 204 ",l_enter,1)
+}
+
+--                 write ("......<NL>") */
+                if l_difference_used one of 0 then
+                {
+                  gsn_master_alt:premium = gsn_master_balance:prsmaster_premium /* gsn_master_alt:premium - l_difference */
+                  l_difference_used = 1 -- can only adjust one record
+                }
+                else
+                {
+                   gsn_master_alt:premium = 0
+                }
+--               write ("%c%s%n",09001,"gsn_master_alt:premium after change = ",gsn_master_alt:premium)
+--               read (23,1,"Press enter = Line 204 ",l_enter,1)
+
+                l_difference = 0
+                }
+              }
+
+              }
+next gsn_master
+           }  -- end of difference checking
+}
+next gsn_master_balance
+}
+
+} -- end of procedure
+
+end -- end of program

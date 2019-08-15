@@ -1,0 +1,3116 @@
+%%                                  
+/*
+Date Written: 09/12/2011
+
+Name: sfpup007_auto.sd
+
+Copyright (c) 2011, SCIPS.com Inc.
+
+Modify
+Date                   By                  Comment
+--------------------------------------------------------------
+09/12/2011            REL                 This program is for the interface with gsn.  i
+                                          It will collect all field that gsn needs by policy_no on a location basis.
+==============================================================
+*/
+
+Program
+  Name = "sfpup007_gsn_auto";
+  Type = "File";
+  Domain = "dummy";
+  Padcharacter = Space;
+  array [30] of unsigned ascii number l_limit[9];
+--  array [4] of signed ascii number l_misc_premium[9];
+  unsigned ascii number l_claim_count[4];
+
+  wdate I_EFF_DATE,
+        l_starting_date,
+        l_prior_policy_eff_date,
+        l_ending_date;
+
+  number function calculate_number_of_vehicle(number,number,number);
+
+  string function find_iso_policy_limit_code(number, number ) ;   --limit and if medpay is being used or not
+
+  unSigned ascii number  l_claims_count[4],
+                         l_class_code[5],
+                         l_prior_policy_number[9],
+                         L_liability_is_policy_wide[1],
+                         l_previous_end_sequence[4],
+                         l_sfpend_forms_only_once[1],
+                         l_calculate_money_once[1],
+                         l_identity_theft[1],
+                         l_start_end_sequence[4],
+                         l_total_rate_modification_factor[3]/dec=3,
+                         l_type_of_policy[2],
+                         l_hold_pol_year[4],
+                         l_hold_end_sequence[4],
+                         l_hold_policy_no[9],
+                         l_hold_prem_no[4],
+                         l_hold_build_no[4],
+                         l_hold_line_of_business[4],
+                         l_policy_no[9],                 --used because of scope rules in cyberscience.
+                         l_res_condo[1],
+                         l_pol_year[4],
+                         l_end_sequence[4],
+                         L_identity_theft_only_once[1],
+                         l_fix_prsmaster_end_sequence[4],
+                         l_prem_no[4],
+                         l_build_no[4],
+                         l_hired_only_once[1],
+                         l_hiredcomp_only_once[1],
+                         l_nonowned_only_once[1],
+                         l_nonmedpay_only_once[1],
+                         l_BRpip_only_once[1],
+                         l_doc_only_once[1],
+                         l_docliab_only_once[1] ,
+                         l_nonliab_only_once[1],
+                         l_package_only_once[1],
+                         l_line_of_business[4],
+                         l_state[2],
+                         l_loop[2],
+                         l_liability_code[2],
+                         l_broadened_pip[9],
+                         l_process_umbrella_once[1],
+                         l_year_built[4],
+                         l_sub_code[4],
+                         l_do_only_once[1],
+                         l_misc[1] ,  --this is for misc premium
+                         l_do_terrorism_only_once[1],
+                         l_terrorism_only_once[1],
+                         l_payment_plan[4];
+                         
+  local unsigned ascii number l_num_vehicle[4];
+  local unsigned ascii number l_table[1] = 1;
+
+  signed ascii number l_premium[9],
+                      l_save_premium[9],
+                      l_diff_total[9],
+                      l_annual_premium[9],
+                      l_current_total_premium[9],
+                      l_short_rate[4]=0/dec=2;
+
+  STRING L_POLICY_INDICATOR[20],
+         l_pip_rating_basis_code[3],
+         l_coverage_code[3],
+         l_line_type[1]= " ",
+         l_anti_theft_code[4],
+         l_state_exception_code[6],
+         l_insured_name[152];
+
+  local file sfsline_by_subline = alias for sfsline;
+
+  local file cal_num_of_vehicle=alias for capvehicle;
+
+  unsigned ascii number l_policy_suffix[6];
+
+  string l_fac_indicator[1],
+         l_iso_policy_limits_code[2],
+--         l_policy_limits[2],
+         l_secondary_class_part[1],
+         l_full_class_code[5],
+         l_building_deductible[6],
+         l_iso_statement_line[3],
+         l_prior_policy_number_prefix[5],
+         l_pip_limit_code[2],
+         l_class_code_fixed[4],
+         l_lob_subline[2],
+         l_hold_lob_subline[2],
+         l_rating_id_code[2],
+         l_wind_deductible[6],
+         l_company_id[10] = "",
+         l_county_str[40],
+         l_construction_class[6],
+         l_protection[6],
+         l_protection1[6],
+         l_coinsurance_factor[4],
+         l_deductible[6],
+         l_age_code[4],
+         l_pip_deductible_code[3],
+         l_limit_id[6],
+         l_exposure[6],
+         l_liability_deductible[6],
+         l_occupancy_type[2],
+         l_form[4],
+         l_enter[1],
+         l_iso_class_code[6],
+         l_iso_sic_code[6],
+         l_no_units[3];
+
+  signed ascii number l_percent_of_prsmaster[6]/dec=4;
+--                      l_prsmaster_total[9]/dec=2;
+
+  local file sfpmaster_check_endorsement = alias for sfpmaster;
+
+  include "prorata.var"
+  include "sfsrevname.var"
+
+initialization
+  l_STARTING_DATE = Date(COMMANDLINE[1,8])
+  l_ENDING_DATE   = Date(COMMANDLINE[9,16])
+  l_hold_policy_no = 0
+  l_hold_pol_year = 0
+  l_hold_end_sequence = 0
+  write("<014>")
+  access sfplocation,
+     set sfplocation:policy_no  = "", approximate    --sets the file to beginning of the file.
+
+  access sfpname,
+     set sfpname:policy_no    = sfplocation:policy_no,
+         sfpname:pol_year     = sfplocation:pol_year,
+         sfpname:end_sequence = sfplocation:end_sequence, generic
+
+  access sfsline,
+     set sfsline:Company_id       = sfpname:company_id,
+         sfsline:line_of_business = sfpname:line_of_business,
+         sfsline:lob_subline      = "00" , exact
+
+  access sfppoint,
+     set sfppoint:policy_no       = sfpname:policy_no,
+         sfppoint:pol_year        = sfpname:pol_year, exact
+
+  access capvehicle,
+     set capvehicle:policy_no  = "", approximate    --sets the file to beginning of the file.
+
+  access gsn_master,
+     set gsn_master:policy_no        = sfplocation:policy_no,
+         gsn_master:pol_year         = sfplocation:pol_year,
+         gsn_master:end_sequence     = sfplocation:end_sequence,
+         gsn_master:prem_no          = sfplocation:prem_no,
+         gsn_master:build_no         = sfplocation:build_no,
+         gsn_master:line_of_business = l_line_of_business, generic
+
+--  do process_scips_premium_file
+
+  access sfplocation,
+     set sfplocation:policy_no  = "", approximate    --sets the file to beginning of the file.
+
+  access capvehicle,
+     set capvehicle:policy_no  = "", approximate    --sets the file to beginning of the file.
+
+  while capvehicle:errornumber = 0
+    {
+      access sfpmaster,
+         set sfpmaster:policy_no    = capvehicle:policy_no,
+             sfpmaster:pol_year     = capvehicle:pol_year,
+             sfpmaster:end_sequence = capvehicle:end_sequence, generic
+
+      access sfpname,
+         set sfpname:policy_no    = capvehicle:policy_no,
+             sfpname:pol_year     = capvehicle:pol_year,
+             sfpname:end_sequence = capvehicle:end_sequence, generic
+
+      l_company_id       = sfpname:company_id
+      l_line_of_business = sfpname:line_of_business
+
+      access sfsline,
+         set sfsline:Company_id       = l_company_id,
+             sfsline:line_of_business = l_line_of_business,
+             sfsline:lob_subline      = "00" , exact
+
+      access sfppoint,
+         set sfppoint:policy_no       = sfpname:policy_no,
+             sfppoint:pol_year        = sfpname:pol_year, exact
+
+      if l_end_sequence <> capvehicle:end_sequence or
+         l_pol_year     <> capvehicle:pol_year or
+         l_policy_no    <> capvehicle:policy_no then
+        {
+          l_hired_only_once     = 0
+          l_brpip_only_once     = 0
+          l_hiredcomp_only_once = 0
+          l_nonowned_only_once  = 0
+          l_nonmedpay_only_once = 0
+          l_doc_only_once       = 0
+          l_docliab_only_once   = 0
+          l_nonliab_only_once   = 0
+          l_package_only_once   = 0
+        }
+
+      l_policy_no    = capvehicle:policy_no
+      l_pol_year     = capvehicle:pol_year
+      l_end_sequence = capvehicle:end_sequence
+
+      l_prem_no      = capvehicle:vehicle_no
+      l_build_no     = 1
+      l_payment_plan = sfpname:payment_plan
+
+
+      If ((sfpmaster:premium_trans_date < l_starting_date and
+           sfpmaster:trans_eff => l_starting_date and
+           sfpmaster:trans_eff <= l_ending_date) or
+
+          (sfpmaster:premium_trans_date => l_starting_date and
+           sfpmaster:premium_trans_date <= l_ending_date and
+           sfpmaster:trans_eff <= l_ending_date)) and
+           sfpmaster:trans_eff <> sfpmaster:trans_exp and
+
+           sfpmaster:policy_no    = l_policy_no and
+           sfpmaster:pol_year     = l_pol_year and
+           sfpmaster:end_sequence = l_end_sequence and
+           sfsline:stmt_lob      <> 999 and
+           sfpmaster:trans_code   < 17 and
+           sfpname:eff_date      >= 11.20.2018 then
+        {
+
+           if (sfppoint:converted one of "Y" or
+              (sfppoint:converted one of "N" and
+               sfpmaster:end_sequence < sfppoint:end_sequence)) then           --check to make sure the transaction was updated if not do not have it included.
+            {
+              access gsn_master,
+                 set gsn_master:policy_no        = capvehicle:policy_no,
+                     gsn_master:pol_year         = capvehicle:pol_year,
+                     gsn_master:end_sequence     = capvehicle:end_sequence,
+                     gsn_master:prem_no          = l_prem_No,
+                     gsn_master:build_no         = l_build_no,
+                     gsn_master:line_of_business = l_line_of_business,generic
+
+              if gsn_master:policy_no        <> capvehicle:policy_no or
+                 gsn_master:pol_year         <> capvehicle:pol_year or
+                 gsn_master:end_sequence     <> capvehicle:end_sequence or
+                 gsn_master:prem_no          <> l_prem_no or
+                 gsn_master:build_no         <> l_build_no or
+                 gsn_master:line_of_business <> l_line_of_business then
+                {
+                  access sfscompany,
+                     set sfscompany:company_id = l_company_id , exact
+
+                  switch (sfsline:lob_code)
+                    case "AUTO"       :  begin
+                                           l_iso_class_code = ""
+                                           do get_auto_info
+                                           do add_to_gsn_master
+                                         end
+                  end
+                }
+
+            }
+        }
+      next capvehicle
+    }
+
+do process_gsn_master_premium_by_subline
+do check_difference_between_files
+
+update
+
+procedure definition
+
+procedure check_difference_between_files
+
+BEGIN
+  access gsn_master_premium,
+     set gsn_master_premium:company_id = "", approximate
+
+  while gsn_master_premium:errornumber = 0
+    {
+      if ((gsn_master_premium:trans_date < l_starting_date and
+           gsn_master_premium:trans_eff => l_starting_date and
+           gsn_master_premium:trans_eff <= l_ending_date) or
+          (gsn_master_premium:trans_date => l_starting_date and
+           gsn_master_premium:trans_date <= l_ending_date and
+           gsn_master_premium:trans_eff <= l_ending_date)) and
+           gsn_master_premium:line_of_business one of 15 then
+        {
+          access gsn_master_compare,
+             set gsn_master_compare:company_id       = l_company_id,
+                 gsn_master_compare:policy_no        = gsn_master_premium:policy_no,
+                 gsn_master_compare:pol_year         = gsn_master_premium:pol_year,
+                 gsn_master_compare:end_sequence     = gsn_master_premium:end_sequence,
+                 gsn_master_compare:line_of_business = gsn_master_premium:line_of_business,
+                 gsn_master_compare:lob_subline      = gsn_master_premium:lob_subline,
+                 gsn_master_compare:trans_date       = gsn_master_premium:trans_date,
+                 gsn_master_compare:trans_code       = gsn_master_premium:trans_code, exact
+
+          if gsn_master_compare:company_id       = l_company_id and
+             gsn_master_compare:policy_no        = gsn_master_premium:policy_no and
+             gsn_master_compare:pol_year         = gsn_master_premium:pol_year and
+             gsn_master_compare:end_sequence     = gsn_master_premium:end_sequence and
+             gsn_master_compare:line_of_business = gsn_master_premium:line_of_business and
+             gsn_master_compare:lob_subline      = gsn_master_premium:lob_subline and
+             gsn_master_compare:trans_date       = gsn_master_premium:trans_date and
+             gsn_master_compare:trans_code       = gsn_master_premium:trans_code then
+            {
+               if gsn_master_compare:premium <> gsn_master_premium:premium then
+                 {
+                   access gsn_master,
+                      set gsn_master:policy_no        = gsn_master_compare:policy_no,
+                          gsn_master:pol_year         = gsn_master_compare:pol_year,
+                          gsn_master:end_sequence     = gsn_master_compare:end_sequence,
+                          gsn_master:prem_no          = gsn_master_compare:prem_no,
+                          gsn_master:build_no         = gsn_master_compare:build_no,
+                          gsn_master:line_of_business = gsn_master_compare:line_of_business,
+                          gsn_master:lob_subline      = gsn_master_compare:lob_subline,
+                          gsn_master:line_type        = gsn_master_compare:line_type,
+                          gsn_master:sub_code         = gsn_master_compare:sub_code, exact
+
+                   if gsn_master:policy_no        = gsn_master_compare:policy_no and
+                      gsn_master:pol_year         = gsn_master_compare:pol_year and
+                      gsn_master:end_sequence     = gsn_master_compare:end_sequence and
+                      gsn_master:prem_no          = gsn_master_compare:prem_no and
+                      gsn_master:build_no         = gsn_master_compare:build_no and
+                      gsn_master:line_of_business = gsn_master_compare:line_of_business and
+                      gsn_master:lob_subline      = gsn_master_compare:lob_subline and
+                      gsn_master:line_type        = gsn_master_compare:line_type and
+                      gsn_master:sub_code         = gsn_master_compare:sub_code and
+                      gsn_master:line_of_business one of 15  then
+                     {
+                       if gsn_master:mark_as_deleted_location one of 1 then
+                         {
+                           l_diff_total = gsn_master:premium + (gsn_master_premium:premium - gsn_master_compare:premium)
+
+                         }
+                       else
+                         {
+                           l_diff_total = gsn_master_premium:premium - gsn_master_compare:premium
+                         }
+                       change gsn_master
+                         begin
+                           if gsn_master:mark_as_deleted_location one of 1 then
+                             {
+                               gsn_master:premium = l_diff_total
+                             }
+                           else
+                             {
+                               gsn_master:premium = gsn_master:premium + l_diff_total --gsn_master_compare:premium + l_diff_total
+                             }
+                         end
+                     }  --if validation of the access make sure it has a good read on the file before you change.
+                 }  --if gsn_master_compare:premium <> gsn_master_premium:premium
+            } -- if statement
+        }
+      next gsn_master_premium
+    }
+END
+
+procedure process_gsn_master_premium_by_subline
+
+--this procedure will get the gsn master file in the same format as the gsn_master_premium file that was created.
+--I will then be able to see which subline have issues.
+
+BEGIN
+  local file gsn_master_just_added = alias for gsn_master;
+
+  l_company_id = "GGUND"
+  access gsn_master_just_added,
+     set gsn_master_just_added:policy_no        = "", generic
+
+  while gsn_master_just_added:errornumber = 0
+    {
+      if ((gsn_master_just_added:trans_date     < l_starting_date and
+           gsn_master_just_added:trans_eff_date => l_starting_date and
+           gsn_master_just_added:trans_eff_date <= l_ending_date) or
+
+          (gsn_master_just_added:trans_date     => l_starting_date and
+           gsn_master_just_added:trans_date     <= l_ending_date and
+           gsn_master_just_added:trans_eff_date <= l_ending_date)) and
+
+           gsn_master_just_added:trans_code < 17 and
+           gsn_master_just_added:line_of_business one of 15 and
+           gsn_master_just_added:premium <> 0 then
+        {
+          access gsn_master_compare,
+             set gsn_master_compare:company_id       = l_company_id,
+                 gsn_master_compare:policy_no        = gsn_master_just_added:policy_no,
+                 gsn_master_compare:pol_year         = gsn_master_just_added:pol_year,
+                 gsn_master_compare:end_sequence     = gsn_master_just_added:end_sequence,
+                 gsn_master_compare:line_of_business = gsn_master_just_added:line_of_business,
+                 gsn_master_compare:lob_subline      = gsn_master_just_added:lob_subline,
+                 gsn_master_compare:trans_date       = gsn_master_just_added:trans_date,
+                 gsn_master_compare:trans_code       = gsn_master_just_added:trans_code, exact
+
+          if gsn_master_compare:company_id       <> l_company_id or
+             gsn_master_compare:policy_no        <> gsn_master_just_added:policy_no or
+             gsn_master_compare:pol_year         <> gsn_master_just_added:pol_year or
+             gsn_master_compare:end_sequence     <> gsn_master_just_added:end_sequence or
+             gsn_master_compare:line_of_business <> gsn_master_just_added:line_of_business or
+             gsn_master_compare:lob_subline      <> gsn_master_just_added:lob_subline or
+             gsn_master_compare:trans_date       <> gsn_master_just_added:trans_date or
+             gsn_master_compare:trans_code       <> gsn_master_just_added:trans_code then
+            {
+              add gsn_master_compare
+                begin
+                  gsn_master_compare:company_id       = l_company_id
+                  gsn_master_compare:policy_no        = gsn_master_just_added:policy_no
+                  gsn_master_compare:pol_year         = gsn_master_just_added:pol_year
+                  gsn_master_compare:end_sequence     = gsn_master_just_added:end_sequence
+                  gsn_master_compare:line_of_business = gsn_master_just_added:line_of_business
+                  gsn_master_compare:lob_subline      = gsn_master_just_added:lob_subline
+                  gsn_master_compare:trans_date       = gsn_master_just_added:trans_date
+                  gsn_master_compare:trans_code       = gsn_master_just_added:trans_code
+                  gsn_master_compare:TRANS_EFF        = gsn_master_just_added:TRANS_EFF_DATE
+                  gsn_master_compare:EFF_DATE         = gsn_master_just_added:POLICY_EFF_DATE
+                  gsn_master_compare:prem_no          = gsn_master_just_added:prem_no
+                  gsn_master_compare:build_no         = gsn_master_just_added:BUILD_NO
+                  gsn_master_compare:sub_code         = gsn_master_just_added:sub_code
+                  gsn_master_compare:premium          = gsn_master_just_added:premium
+               end
+            }
+          else
+            if gsn_master_compare:company_id       = l_company_id and
+               gsn_master_compare:policy_no        = gsn_master_just_added:policy_no and
+               gsn_master_compare:pol_year         = gsn_master_just_added:pol_year and
+               gsn_master_compare:end_sequence     = gsn_master_just_added:end_sequence and
+               gsn_master_compare:line_of_business = gsn_master_just_added:line_of_business and
+               gsn_master_compare:lob_subline      = gsn_master_just_added:lob_subline and
+               gsn_master_compare:trans_date       = gsn_master_just_added:trans_date and
+               gsn_master_compare:trans_code       = gsn_master_just_added:trans_code and
+               gsn_master_compare:trans_eff        = gsn_master_just_added:trans_eff_date and
+               gsn_master_compare:eff_date         = gsn_master_just_added:policy_eff_date then
+               {
+                change gsn_master_compare
+                  begin
+--                    gsn_master_compare:company_id       = l_company_id
+--                    gsn_master_compare:policy_no        = gsn_master_just_added:policy_no
+--                    gsn_master_compare:pol_year         = gsn_master_just_added:pol_year
+--                    gsn_master_compare:end_sequence     = gsn_master_just_added:end_sequence
+--                    gsn_master_compare:line_of_business = gsn_master_just_added:line_of_business
+--                    gsn_master_compare:lob_subline      = gsn_master_just_added:lob_subline
+--                    gsn_master_compare:trans_date       = gsn_master_just_added:trans_date
+--                    gsn_master_compare:trans_code       = gsn_master_just_added:trans_code
+--                    gsn_master_compare:TRANS_EFF        = gsn_master_just_added:TRANS_EFF_DATE
+--                    gsn_master_compare:EFF_DATE         = gsn_master_just_added:POLICY_EFF_DATE
+--                    gsn_master_compare:prem_no          = gsn_master_just_added:prem_no
+--                    gsn_master_compare:build_no         = gsn_master_just_added:BUILD_NO
+--                    gsn_master_compare:sub_code         = gsn_master_just_added:sub_code
+                      gsn_master_compare:premium            = gsn_master_compare:premium + gsn_master_just_added:premium
+                 end
+              }
+         }
+      next gsn_master_just_added
+    }
+END
+
+
+procedure process_scips_premium_file
+
+--this procedure will create a new file from premium that has the following key
+--COMPANY_ID+POLICY_NO+POL_YEAR+END_SEQUENCE+LINE_OF_BUSINESS+LOB_SUBLINE+TRANS_DATE+TRANS_CODE
+--this will then allow me to access this file by subline and trans_date to verify that my total for all my location are correct
+
+
+BEGIN
+  local unsigned ascii number l_count_change[8];
+  access prsmaster,
+     set prsmaster:company_id = "", generic
+
+  while prsmaster:errornumber = 0
+    {
+      if ((prsmaster:trans_date < l_starting_date and
+           prsmaster:trans_eff => l_starting_date and
+           prsmaster:trans_eff <= l_ending_date) or
+
+          (prsmaster:trans_date => l_starting_date and
+           prsmaster:trans_date <= l_ending_date and
+           prsmaster:trans_eff <= l_ending_date)) and
+
+           prsmaster:trans_eff <> prsmaster:trans_exp and
+           prsmaster:line_of_business one of 15 and
+           prsmaster:trans_code < 17 then
+        {
+          write("%c-->prsmaster:policy_no-->%x<--",02011,prsmaster:policy_no)
+          access gsn_master_premium,
+             set gsn_master_premium:company_id       = prsmaster:company_id,
+                 gsn_master_premium:policy_no        = prsmaster:policy_no,
+                 gsn_master_premium:pol_year         = prsmaster:pol_year,
+                 gsn_master_premium:end_sequence     = prsmaster:end_sequence,
+                 gsn_master_premium:line_of_business = prsmaster:line_of_business,
+                 gsn_master_premium:lob_subline      = prsmaster:lob_subline,
+                 gsn_master_premium:trans_date       = prsmaster:trans_date,
+                 gsn_master_premium:trans_code       = prsmaster:trans_code, exact
+
+          if prsmaster:trans_code not one of 10,14 and
+             prsmaster:end_sequence one of 0 then
+            {
+              do verify_prsmaster_end_sequence(prsmaster:policy_no,prsmaster:pol_year)
+--              write("%c<014>%x%x",1001,"sfpmaster_alias:policy_no",  sfpmaster_alias:policy_no)
+--              write("%c%x%x",2001,"sfpmaster_alias:pol_year",        sfpmaster_alias:pol_year)
+--              write("%c%x%x",3001,"sfpmaster_alias:end_sequence",    sfpmaster_alias:end_sequence)
+--              write("%c%x%x",4001,"sfpmaster_alias:trans_code",      sfpmaster_alias:trans_code)
+              if l_fix_prsmaster_end_sequence <> 0 then
+                {
+                  if gsn_master_premium:company_id       <> prsmaster:company_id or
+                     gsn_master_premium:policy_no        <> prsmaster:policy_no or
+                     gsn_master_premium:pol_year         <> prsmaster:pol_year or
+                     gsn_master_premium:end_sequence     <> l_fix_prsmaster_end_sequence or
+                     gsn_master_premium:line_of_business <> prsmaster:line_of_business or
+                     gsn_master_premium:lob_subline      <> prsmaster:lob_subline or
+                     gsn_master_premium:trans_date       <> prsmaster:trans_date or
+                     gsn_master_premium:trans_code       <> prsmaster:trans_code then
+                    {
+                      add gsn_master_premium
+                        begin
+                          gsn_master_premium:company_id       = prsmaster:company_id
+                          gsn_master_premium:policy_no        = prsmaster:policy_no
+                          gsn_master_premium:pol_year         = prsmaster:pol_year
+                          gsn_master_premium:end_sequence     = l_fix_prsmaster_end_sequence
+                          gsn_master_premium:line_of_business = prsmaster:line_of_business
+                          gsn_master_premium:lob_subline      = prsmaster:lob_subline
+                          gsn_master_premium:trans_date       = prsmaster:trans_date
+                          gsn_master_premium:trans_code       = prsmaster:trans_code
+                          gsn_master_premium:trans_eff        = prsmaster:trans_eff
+                          gsn_master_premium:eff_date         = prsmaster:eff_date
+                          gsn_master_premium:premium          = prsmaster:premium
+                        end
+                    }
+                  else
+                    {
+                      change gsn_master_premium
+                        begin
+                          gsn_master_premium:company_id       = prsmaster:company_id
+                          gsn_master_premium:policy_no        = prsmaster:policy_no
+                          gsn_master_premium:pol_year         = prsmaster:pol_year
+                          gsn_master_premium:end_sequence     = l_fix_prsmaster_end_sequence
+                          gsn_master_premium:line_of_business = prsmaster:line_of_business
+                          gsn_master_premium:lob_subline      = prsmaster:lob_subline
+                          gsn_master_premium:trans_date       = prsmaster:trans_date
+                          gsn_master_premium:trans_code       = prsmaster:trans_code
+                          gsn_master_premium:trans_eff        = prsmaster:trans_eff
+                          gsn_master_premium:eff_date         = prsmaster:eff_date
+                          gsn_master_premium:premium          = gsn_master_premium:premium + prsmaster:premium
+                        end
+                       l_count_change = l_count_change + 1
+                     }
+                }
+            }
+          else
+            {
+              if gsn_master_premium:company_id       <> prsmaster:company_id or
+                 gsn_master_premium:policy_no        <> prsmaster:policy_no or
+                 gsn_master_premium:pol_year         <> prsmaster:pol_year or
+                 gsn_master_premium:end_sequence     <> prsmaster:end_sequence or
+                 gsn_master_premium:line_of_business <> prsmaster:line_of_business or
+                 gsn_master_premium:lob_subline      <> prsmaster:lob_subline or
+                 gsn_master_premium:trans_date       <> prsmaster:trans_date or
+                 gsn_master_premium:trans_code       <> prsmaster:trans_code then
+                {
+                  add gsn_master_premium
+                    begin
+                      gsn_master_premium:company_id       = prsmaster:company_id
+                      gsn_master_premium:policy_no        = prsmaster:policy_no
+                      gsn_master_premium:pol_year         = prsmaster:pol_year
+                      gsn_master_premium:end_sequence     = prsmaster:end_sequence
+                      gsn_master_premium:line_of_business = prsmaster:line_of_business
+                      gsn_master_premium:lob_subline      = prsmaster:lob_subline
+                      gsn_master_premium:trans_date       = prsmaster:trans_date
+                      gsn_master_premium:trans_code       = prsmaster:trans_code
+                      gsn_master_premium:trans_eff        = prsmaster:trans_eff
+                      gsn_master_premium:eff_date         = prsmaster:eff_date
+                      gsn_master_premium:premium          = prsmaster:premium
+                    end
+                }
+              else
+                {
+                  change gsn_master_premium
+                    begin
+                      gsn_master_premium:company_id       = prsmaster:company_id
+                      gsn_master_premium:policy_no        = prsmaster:policy_no
+                      gsn_master_premium:pol_year         = prsmaster:pol_year
+                      gsn_master_premium:end_sequence     = prsmaster:end_sequence
+                      gsn_master_premium:line_of_business = prsmaster:line_of_business
+                      gsn_master_premium:lob_subline      = prsmaster:lob_subline
+                      gsn_master_premium:trans_date       = prsmaster:trans_date
+                      gsn_master_premium:trans_code       = prsmaster:trans_code
+                      gsn_master_premium:trans_eff        = prsmaster:trans_eff
+                      gsn_master_premium:eff_date         = prsmaster:eff_date
+                      gsn_master_premium:premium          = gsn_master_premium:premium + prsmaster:premium
+                    end
+                   l_count_change = l_count_change + 1
+                 }
+            }
+        }
+      next prsmaster
+    }
+END
+
+procedure verify_prsmaster_end_sequence(number p_policy_no,number p_pol_year)
+
+begin
+  l_fix_prsmaster_end_sequence = 0
+  access sfpmaster_alias,
+     set sfpmaster_alias:policy_no = p_policy_no,
+         sfpmaster_alias:pol_year  = p_pol_year, generic
+
+  while (sfpmaster_alias:policy_no = p_policy_no and
+         sfpmaster_alias:pol_year  = p_pol_year) and
+         l_fix_prsmaster_end_sequence = 0
+    {
+      if ((sfpmaster_alias:premium_trans_date < l_starting_date and
+           sfpmaster_alias:trans_eff => l_starting_date and
+           sfpmaster_alias:trans_eff <= l_ending_date) or
+
+         (sfpmaster_alias:premium_trans_date => l_starting_date and
+          sfpmaster_alias:premium_trans_date <= l_ending_date and
+          sfpmaster_alias:trans_eff <= l_ending_date)) and
+          sfpmaster_alias:trans_eff <> sfpmaster:trans_exp and
+          sfpmaster_alias:trans_code not one of 10,14 then
+        {
+          if sfpmaster_alias:premium_trans_date = prsmaster:trans_date and
+             sfpmaster_alias:trans_eff          = prsmaster:trans_eff then
+            {
+              l_fix_prsmaster_end_sequence = sfpmaster_alias:end_sequence
+            }
+        }
+      next sfpmaster_alias
+    }
+end
+
+procedure get_auto_info
+
+BEGIN
+  string l_class_code_str[5];
+
+  Access casclass,
+     Set casclass:COMPANY_ID       = capvehicle:COMPANY_ID,
+         casclass:STATE            = capvehicle:STATE,
+         casclass:LINE_OF_BUSINESS = capvehicle:LINE_OF_BUSINESS,
+         casclass:type             = capvehicle:type,
+         casclass:table            = l_table,
+         casclass:class_code       = capvehicle:class_code, generic
+
+  if sfpname:eff_date >= 06.01.2014 then
+    {
+      if capvehicle:type = 1 then
+        {
+          switch (len(str(capvehicle:class_code)))
+            case 2 : l_class_code_fixed = str(capvehicle:class_code,"99")
+            case 3 : l_class_code_fixed = str(capvehicle:class_code,"999")
+            case 4 : l_class_code_fixed = str(capvehicle:class_code,"9999")
+          end
+
+          switch (capvehicle:secondary_class)
+            case 0  : l_secondary_class_part = ""
+            default : l_secondary_class_part = str(capvehicle:secondary_class)
+          end
+          l_class_code_str = trun(l_class_code_fixed) + trun(l_secondary_class_part)
+        }
+      else
+        {
+          switch (len(str(capvehicle:class_code)))
+            case 2 : l_class_code_fixed = str(capvehicle:class_code,"99")
+            case 3 : l_class_code_fixed = str(capvehicle:class_code,"999")
+            case 4 : l_class_code_fixed = str(capvehicle:class_code,"9999")
+          end
+          l_class_code_str = l_class_code_fixed
+        }
+       l_class_code = val(l_class_code_str)
+
+--       write("%c-->iso_class_code%x<--",02021,l_iso_class_code)
+--       Read (23,1,"Press Enter to Continue ",L_ENTER,1)
+       switch (l_class_code_str)
+         case "113" : l_iso_class_code  = "01139"
+         case "114" : l_iso_class_code  = "01149"
+         case "115" : l_iso_class_code  = "01159"
+         case "116" : l_iso_class_code  = "01169"
+         case "117" : l_iso_class_code  = "01179"
+         case "118" : l_iso_class_code  = "01189"
+         case "119" : l_iso_class_code  = "01199"
+         case "123" : l_iso_class_code  = "01239"
+         case "124" : l_iso_class_code  = "01249"
+         case "125" : l_iso_class_code  = "01259"
+         case "126" : l_iso_class_code  = "01269"
+         case "127" : l_iso_class_code  = "01279"
+         case "128" : l_iso_class_code  = "01289"
+         case "129" : l_iso_class_code  = "01299"
+         case "133" : l_iso_class_code  = "01339"
+         case "134" : l_iso_class_code  = "01349"
+         case "135" : l_iso_class_code  = "01359"
+         case "136" : l_iso_class_code  = "01369"
+         case "137" : l_iso_class_code  = "01379"
+         case "138" : l_iso_class_code  = "01389"
+         case "139" : l_iso_class_code  = "01399"
+         case "143" : l_iso_class_code  = "01439"
+         case "144" : l_iso_class_code  = "01449"
+         case "145" : l_iso_class_code  = "01459"
+         case "146" : l_iso_class_code  = "01469"
+         case "147" : l_iso_class_code  = "01479"
+         case "148" : l_iso_class_code  = "01489"
+         case "149" : l_iso_class_code  = "01499"
+         case "153" : l_iso_class_code  = "01539"
+         case "154" : l_iso_class_code  = "01549"
+         case "155" : l_iso_class_code  = "01559"
+         case "156" : l_iso_class_code  = "01569"
+         case "157" : l_iso_class_code  = "01579"
+         case "158" : l_iso_class_code  = "01589"
+         case "159" : l_iso_class_code  = "01599"
+         case "163" : l_iso_class_code  = "01639"
+         case "164" : l_iso_class_code  = "01649"
+         case "165" : l_iso_class_code  = "01659"
+         case "166" : l_iso_class_code  = "01669"
+         case "167" : l_iso_class_code  = "01679"
+         case "168" : l_iso_class_code  = "01689"
+         case "169" : l_iso_class_code  = "01699"
+         case "213" : l_iso_class_code  = "02139"
+         case "214" : l_iso_class_code  = "02149"
+         case "215" : l_iso_class_code  = "02159"
+         case "216" : l_iso_class_code  = "02169"
+         case "217" : l_iso_class_code  = "02179"
+         case "218" : l_iso_class_code  = "02189"
+         case "219" : l_iso_class_code  = "02199"
+         case "223" : l_iso_class_code  = "02239"
+         case "224" : l_iso_class_code  = "02249"
+         case "225" : l_iso_class_code  = "02259"
+         case "226" : l_iso_class_code  = "02269"
+         case "227" : l_iso_class_code  = "02279"
+         case "228" : l_iso_class_code  = "02289"
+         case "229" : l_iso_class_code  = "02299"
+         case "233" : l_iso_class_code  = "02339"
+         case "234" : l_iso_class_code  = "02349"
+         case "235" : l_iso_class_code  = "02359"
+         case "236" : l_iso_class_code  = "02369"
+         case "237" : l_iso_class_code  = "02379"
+         case "238" : l_iso_class_code  = "02389"
+         case "239" : l_iso_class_code  = "02399"
+         case "243" : l_iso_class_code  = "02439"
+         case "244" : l_iso_class_code  = "02449"
+         case "245" : l_iso_class_code  = "02459"
+         case "246" : l_iso_class_code  = "02469"
+         case "247" : l_iso_class_code  = "02479"
+         case "248" : l_iso_class_code  = "02489"
+         case "249" : l_iso_class_code  = "02499"
+         case "253" : l_iso_class_code  = "02539"
+         case "254" : l_iso_class_code  = "02549"
+         case "255" : l_iso_class_code  = "02559"
+         case "256" : l_iso_class_code  = "02569"
+         case "257" : l_iso_class_code  = "02579"
+         case "258" : l_iso_class_code  = "02589"
+         case "259" : l_iso_class_code  = "02599"
+         case "263" : l_iso_class_code  = "02639"
+         case "264" : l_iso_class_code  = "02649"
+         case "265" : l_iso_class_code  = "02659"
+         case "266" : l_iso_class_code  = "02669"
+         case "267" : l_iso_class_code  = "02679"
+         case "268" : l_iso_class_code  = "02689"
+         case "269" : l_iso_class_code  = "02699"
+         case "313" : l_iso_class_code  = "03139"
+         case "314" : l_iso_class_code  = "03149"
+         case "315" : l_iso_class_code  = "03159"
+         case "316" : l_iso_class_code  = "03169"
+         case "317" : l_iso_class_code  = "03179"
+         case "318" : l_iso_class_code  = "03189"
+         case "319" : l_iso_class_code  = "03199"
+         case "323" : l_iso_class_code  = "03239"
+         case "324" : l_iso_class_code  = "03249"
+         case "325" : l_iso_class_code  = "03259"
+         case "326" : l_iso_class_code  = "03269"
+         case "327" : l_iso_class_code  = "03279"
+         case "328" : l_iso_class_code  = "03289"
+         case "329" : l_iso_class_code  = "03299"
+         case "333" : l_iso_class_code  = "03339"
+         case "334" : l_iso_class_code  = "03349"
+         case "335" : l_iso_class_code  = "03359"
+         case "336" : l_iso_class_code  = "03369"
+         case "337" : l_iso_class_code  = "03379"
+         case "338" : l_iso_class_code  = "03389"
+         case "339" : l_iso_class_code  = "03399"
+         case "343" : l_iso_class_code  = "03439"
+         case "344" : l_iso_class_code  = "03449"
+         case "345" : l_iso_class_code  = "03459"
+         case "346" : l_iso_class_code  = "03469"
+         case "347" : l_iso_class_code  = "03479"
+         case "348" : l_iso_class_code  = "03489"
+         case "349" : l_iso_class_code  = "03499"
+         case "353" : l_iso_class_code  = "03539"
+         case "354" : l_iso_class_code  = "03549"
+         case "355" : l_iso_class_code  = "03559"
+         case "356" : l_iso_class_code  = "03569"
+         case "357" : l_iso_class_code  = "03579"
+         case "358" : l_iso_class_code  = "03589"
+         case "359" : l_iso_class_code  = "03599"
+         case "363" : l_iso_class_code  = "03639"
+         case "364" : l_iso_class_code  = "03649"
+         case "365" : l_iso_class_code  = "03659"
+         case "366" : l_iso_class_code  = "03669"
+         case "367" : l_iso_class_code  = "03679"
+         case "368" : l_iso_class_code  = "03689"
+         case "369" : l_iso_class_code  = "03699"
+         case "2113" : l_iso_class_code = "21139"
+         case "2114" : l_iso_class_code = "21149"
+         case "2115" : l_iso_class_code = "21159"
+         case "2116" : l_iso_class_code = "21169"
+         case "2117" : l_iso_class_code = "21179"
+         case "2118" : l_iso_class_code = "21189"
+         case "2119" : l_iso_class_code = "21199"
+         case "2123" : l_iso_class_code = "21239"
+         case "2124" : l_iso_class_code = "21249"
+         case "2125" : l_iso_class_code = "21259"
+         case "2126" : l_iso_class_code = "21269"
+         case "2127" : l_iso_class_code = "21279"
+         case "2128" : l_iso_class_code = "21289"
+         case "2129" : l_iso_class_code = "21299"
+         case "2143" : l_iso_class_code = "21439"
+         case "2144" : l_iso_class_code = "21449"
+         case "2145" : l_iso_class_code = "21459"
+         case "2146" : l_iso_class_code = "21469"
+         case "2147" : l_iso_class_code = "21479"
+         case "2148" : l_iso_class_code = "21489"
+         case "2149" : l_iso_class_code = "21499"
+         case "2153" : l_iso_class_code = "21539"
+         case "2154" : l_iso_class_code = "21549"
+         case "2155" : l_iso_class_code = "21559"
+         case "2156" : l_iso_class_code = "21569"
+         case "2157" : l_iso_class_code = "21579"
+         case "2158" : l_iso_class_code = "21589"
+         case "2159" : l_iso_class_code = "21599"
+         case "2213" : l_iso_class_code = "22139"
+         case "2214" : l_iso_class_code = "22149"
+         case "2215" : l_iso_class_code = "22159"
+         case "2216" : l_iso_class_code = "22169"
+         case "2217" : l_iso_class_code = "22179"
+         case "2218" : l_iso_class_code = "22189"
+         case "2219" : l_iso_class_code = "22199"
+         case "2223" : l_iso_class_code = "22239"
+         case "2224" : l_iso_class_code = "22249"
+         case "2225" : l_iso_class_code = "22259"
+         case "2226" : l_iso_class_code = "22269"
+         case "2227" : l_iso_class_code = "22279"
+         case "2228" : l_iso_class_code = "22289"
+         case "2229" : l_iso_class_code = "22299"
+         case "2163" : l_iso_class_code = "22439"
+         case "2164" : l_iso_class_code = "22449"
+         case "2165" : l_iso_class_code = "22459"
+         case "2166" : l_iso_class_code = "22469"
+         case "2167" : l_iso_class_code = "22479"
+         case "2168" : l_iso_class_code = "22489"
+         case "2169" : l_iso_class_code = "22499"
+         case "2243" : l_iso_class_code = "22539"
+         case "2244" : l_iso_class_code = "22549"
+         case "2245" : l_iso_class_code = "22559"
+         case "2246" : l_iso_class_code = "22569"
+         case "2247" : l_iso_class_code = "22579"
+         case "2248" : l_iso_class_code = "22589"
+         case "2249" : l_iso_class_code = "22599"
+         case "2313" : l_iso_class_code = "23139"
+         case "2314" : l_iso_class_code = "23149"
+         case "2315" : l_iso_class_code = "23159"
+         case "2316" : l_iso_class_code = "23169"
+         case "2317" : l_iso_class_code = "23179"
+         case "2318" : l_iso_class_code = "23189"
+         case "2319" : l_iso_class_code = "23199"
+         case "2323" : l_iso_class_code = "23239"
+         case "2324" : l_iso_class_code = "23249"
+         case "2325" : l_iso_class_code = "23259"
+         case "2326" : l_iso_class_code = "23269"
+         case "2327" : l_iso_class_code = "23279"
+         case "2328" : l_iso_class_code = "23289"
+         case "2329" : l_iso_class_code = "23299"
+         case "2253" : l_iso_class_code = "23439"
+         case "2254" : l_iso_class_code = "23449"
+         case "2255" : l_iso_class_code = "23459"
+         case "2256" : l_iso_class_code = "23469"
+         case "2257" : l_iso_class_code = "23479"
+         case "2258" : l_iso_class_code = "23489"
+         case "2259" : l_iso_class_code = "23499"
+         case "2263" : l_iso_class_code = "23539"
+         case "2264" : l_iso_class_code = "23549"
+         case "2265" : l_iso_class_code = "23559"
+         case "2266" : l_iso_class_code = "23569"
+         case "2267" : l_iso_class_code = "23579"
+         case "2268" : l_iso_class_code = "23589"
+         case "2269" : l_iso_class_code = "23599"
+         case "3113" : l_iso_class_code = "31139"
+         case "3114" : l_iso_class_code = "31149"
+         case "3115" : l_iso_class_code = "31159"
+         case "3116" : l_iso_class_code = "31169"
+         case "3117" : l_iso_class_code = "31179"
+         case "3118" : l_iso_class_code = "31189"
+         case "3119" : l_iso_class_code = "31199"
+         case "3123" : l_iso_class_code = "31239"
+         case "3124" : l_iso_class_code = "31249"
+         case "3125" : l_iso_class_code = "31259"
+         case "3126" : l_iso_class_code = "31269"
+         case "3127" : l_iso_class_code = "31279"
+         case "3128" : l_iso_class_code = "31289"
+         case "3129" : l_iso_class_code = "31299"
+         case "3143" : l_iso_class_code = "31439"
+         case "3144" : l_iso_class_code = "31449"
+         case "3145" : l_iso_class_code = "31459"
+         case "3146" : l_iso_class_code = "31469"
+         case "3147" : l_iso_class_code = "31479"
+         case "3148" : l_iso_class_code = "31489"
+         case "3149" : l_iso_class_code = "31499"
+         case "3153" : l_iso_class_code = "31539"
+         case "3154" : l_iso_class_code = "31549"
+         case "3155" : l_iso_class_code = "31559"
+         case "3156" : l_iso_class_code = "31569"
+         case "3157" : l_iso_class_code = "31579"
+         case "3158" : l_iso_class_code = "31589"
+         case "3159" : l_iso_class_code = "31599"
+         case "3213" : l_iso_class_code = "32139"
+         case "3214" : l_iso_class_code = "32149"
+         case "3215" : l_iso_class_code = "32159"
+         case "3216" : l_iso_class_code = "32169"
+         case "3217" : l_iso_class_code = "32179"
+         case "3218" : l_iso_class_code = "32189"
+         case "3219" : l_iso_class_code = "32199"
+         case "3223" : l_iso_class_code = "32239"
+         case "3224" : l_iso_class_code = "32249"
+         case "3225" : l_iso_class_code = "32259"
+         case "3226" : l_iso_class_code = "32269"
+         case "3227" : l_iso_class_code = "32279"
+         case "3228" : l_iso_class_code = "32289"
+         case "3229" : l_iso_class_code = "32299"
+         case "3163" : l_iso_class_code = "32439"
+         case "3164" : l_iso_class_code = "32449"
+         case "3165" : l_iso_class_code = "32459"
+         case "3166" : l_iso_class_code = "32469"
+         case "3167" : l_iso_class_code = "32479"
+         case "3168" : l_iso_class_code = "32489"
+         case "3169" : l_iso_class_code = "32499"
+         case "3243" : l_iso_class_code = "32539"
+         case "3244" : l_iso_class_code = "32549"
+         case "3245" : l_iso_class_code = "32559"
+         case "3246" : l_iso_class_code = "32569"
+         case "3247" : l_iso_class_code = "32579"
+         case "3248" : l_iso_class_code = "32589"
+         case "3249" : l_iso_class_code = "32599"
+         case "3313" : l_iso_class_code = "33139"
+         case "3314" : l_iso_class_code = "33149"
+         case "3315" : l_iso_class_code = "33159"
+         case "3316" : l_iso_class_code = "33169"
+         case "3317" : l_iso_class_code = "33179"
+         case "3318" : l_iso_class_code = "33189"
+         case "3319" : l_iso_class_code = "33199"
+         case "3323" : l_iso_class_code = "33239"
+         case "3324" : l_iso_class_code = "33249"
+         case "3325" : l_iso_class_code = "33259"
+         case "3326" : l_iso_class_code = "33269"
+         case "3327" : l_iso_class_code = "33279"
+         case "3328" : l_iso_class_code = "33289"
+         case "3329" : l_iso_class_code = "33299"
+         case "3343" : l_iso_class_code = "33439"
+         case "3344" : l_iso_class_code = "33449"
+         case "3345" : l_iso_class_code = "33459"
+         case "3346" : l_iso_class_code = "33469"
+         case "3347" : l_iso_class_code = "33479"
+         case "3348" : l_iso_class_code = "33489"
+         case "3349" : l_iso_class_code = "33499"
+         case "3353" : l_iso_class_code = "33539"
+         case "3354" : l_iso_class_code = "33549"
+         case "3355" : l_iso_class_code = "33559"
+         case "3356" : l_iso_class_code = "33569"
+         case "3357" : l_iso_class_code = "33579"
+         case "3358" : l_iso_class_code = "33589"
+         case "3359" : l_iso_class_code = "33599"
+         case "4113" : l_iso_class_code = "40139"
+         case "4114" : l_iso_class_code = "40149"
+         case "4115" : l_iso_class_code = "40159"
+         case "4116" : l_iso_class_code = "40169"
+         case "4117" : l_iso_class_code = "40179"
+         case "4118" : l_iso_class_code = "40189"
+         case "4119" : l_iso_class_code = "40199"
+         case "4123" : l_iso_class_code = "40239"
+         case "4124" : l_iso_class_code = "40249"
+         case "4125" : l_iso_class_code = "40259"
+         case "4126" : l_iso_class_code = "40269"
+         case "4127" : l_iso_class_code = "40279"
+         case "4128" : l_iso_class_code = "40289"
+         case "4129" : l_iso_class_code = "40299"
+         case "4143" : l_iso_class_code = "40439"
+         case "4144" : l_iso_class_code = "40449"
+         case "4145" : l_iso_class_code = "40459"
+         case "4146" : l_iso_class_code = "40469"
+         case "4147" : l_iso_class_code = "40479"
+         case "4148" : l_iso_class_code = "40489"
+         case "4149" : l_iso_class_code = "40499"
+         case "4153" : l_iso_class_code = "40539"
+         case "4154" : l_iso_class_code = "40549"
+         case "4155" : l_iso_class_code = "40559"
+         case "4156" : l_iso_class_code = "40569"
+         case "4157" : l_iso_class_code = "40579"
+         case "4158" : l_iso_class_code = "40589"
+         case "4159" : l_iso_class_code = "40599"
+         case "5113" : l_iso_class_code = "34139"
+         case "5114" : l_iso_class_code = "34149"
+         case "5115" : l_iso_class_code = "34159"
+         case "5116" : l_iso_class_code = "34169"
+         case "5117" : l_iso_class_code = "34179"
+         case "5118" : l_iso_class_code = "34189"
+         case "5119" : l_iso_class_code = "34199"
+         case "5123" : l_iso_class_code = "34239"
+         case "5124" : l_iso_class_code = "34249"
+         case "5125" : l_iso_class_code = "34259"
+         case "5126" : l_iso_class_code = "34269"
+         case "5127" : l_iso_class_code = "34279"
+         case "5128" : l_iso_class_code = "34289"
+         case "5129" : l_iso_class_code = "34299"
+         case "5143" : l_iso_class_code = "34439"
+         case "5144" : l_iso_class_code = "34449"
+         case "5145" : l_iso_class_code = "34459"
+         case "5146" : l_iso_class_code = "34469"
+         case "5147" : l_iso_class_code = "34479"
+         case "5148" : l_iso_class_code = "34489"
+         case "5149" : l_iso_class_code = "34499"
+         case "5153" : l_iso_class_code = "34539"
+         case "5154" : l_iso_class_code = "34549"
+         case "5155" : l_iso_class_code = "34559"
+         case "5156" : l_iso_class_code = "34569"
+         case "5157" : l_iso_class_code = "34579"
+         case "5158" : l_iso_class_code = "34589"
+         case "5159" : l_iso_class_code = "34599"
+         case "5213" : l_iso_class_code = "35139"
+         case "5214" : l_iso_class_code = "35149"
+         case "5215" : l_iso_class_code = "35159"
+         case "5216" : l_iso_class_code = "35169"
+         case "5217" : l_iso_class_code = "35179"
+         case "5218" : l_iso_class_code = "35189"
+         case "5219" : l_iso_class_code = "35199"
+         case "5223" : l_iso_class_code = "35239"
+         case "5224" : l_iso_class_code = "35249"
+         case "5225" : l_iso_class_code = "35259"
+         case "5226" : l_iso_class_code = "35269"
+         case "5227" : l_iso_class_code = "35279"
+         case "5228" : l_iso_class_code = "35289"
+         case "5229" : l_iso_class_code = "35299"
+         case "5243" : l_iso_class_code = "35439"
+         case "5244" : l_iso_class_code = "35449"
+         case "5245" : l_iso_class_code = "35459"
+         case "5246" : l_iso_class_code = "35469"
+         case "5247" : l_iso_class_code = "35479"
+         case "5248" : l_iso_class_code = "35489"
+         case "5249" : l_iso_class_code = "35499"
+         case "5353" : l_iso_class_code = "35539"
+         case "5354" : l_iso_class_code = "35549"
+         case "5355" : l_iso_class_code = "35559"
+         case "5356" : l_iso_class_code = "35569"
+         case "5357" : l_iso_class_code = "35579"
+         case "5358" : l_iso_class_code = "35589"
+         case "5359" : l_iso_class_code = "35599"
+         case "5313" : l_iso_class_code = "36139"
+         case "5314" : l_iso_class_code = "36149"
+         case "5315" : l_iso_class_code = "36159"
+         case "5316" : l_iso_class_code = "36169"
+         case "5317" : l_iso_class_code = "36179"
+         case "5318" : l_iso_class_code = "36189"
+         case "5319" : l_iso_class_code = "36199"
+         case "5323" : l_iso_class_code = "36239"
+         case "5324" : l_iso_class_code = "36249"
+         case "5325" : l_iso_class_code = "36259"
+         case "5326" : l_iso_class_code = "36269"
+         case "5327" : l_iso_class_code = "36279"
+         case "5328" : l_iso_class_code = "36289"
+         case "5329" : l_iso_class_code = "36299"
+         case "5343" : l_iso_class_code = "36439"
+         case "5344" : l_iso_class_code = "36449"
+         case "5345" : l_iso_class_code = "36459"
+         case "5346" : l_iso_class_code = "36469"
+         case "5347" : l_iso_class_code = "36479"
+         case "5348" : l_iso_class_code = "36489"
+         case "5349" : l_iso_class_code = "36499"
+         case "5353" : l_iso_class_code = "36539"
+         case "5354" : l_iso_class_code = "36549"
+         case "5355" : l_iso_class_code = "36559"
+         case "5356" : l_iso_class_code = "36569"
+         case "5357" : l_iso_class_code = "36579"
+         case "5358" : l_iso_class_code = "36589"
+         case "5359" : l_iso_class_code = "36599"
+         case "6713" : l_iso_class_code = "67139"
+         case "6714" : l_iso_class_code = "67149"
+         case "6715" : l_iso_class_code = "67159"
+         case "6716" : l_iso_class_code = "67169"
+         case "6717" : l_iso_class_code = "67179"
+         case "6718" : l_iso_class_code = "67189"
+         case "6719" : l_iso_class_code = "67199"
+         case "6723" : l_iso_class_code = "67239"
+         case "6724" : l_iso_class_code = "67249"
+         case "6725" : l_iso_class_code = "67259"
+         case "6726" : l_iso_class_code = "67269"
+         case "6727" : l_iso_class_code = "67279"
+         case "6728" : l_iso_class_code = "67289"
+         case "6729" : l_iso_class_code = "67299"
+         case "6743" : l_iso_class_code = "67439"
+         case "6744" : l_iso_class_code = "67449"
+         case "6745" : l_iso_class_code = "67459"
+         case "6746" : l_iso_class_code = "67469"
+         case "6747" : l_iso_class_code = "67479"
+         case "6748" : l_iso_class_code = "67489"
+         case "6749" : l_iso_class_code = "67499"
+         case "6753" : l_iso_class_code = "67539"
+         case "6754" : l_iso_class_code = "67549"
+         case "6755" : l_iso_class_code = "67559"
+         case "6756" : l_iso_class_code = "67569"
+         case "6757" : l_iso_class_code = "67579"
+         case "6758" : l_iso_class_code = "67589"
+         case "6759" : l_iso_class_code = "67599"
+         case "6813" : l_iso_class_code = "68139"
+         case "6814" : l_iso_class_code = "68149"
+         case "6815" : l_iso_class_code = "68159"
+         case "6816" : l_iso_class_code = "68169"
+         case "6817" : l_iso_class_code = "68179"
+         case "6818" : l_iso_class_code = "68189"
+         case "6819" : l_iso_class_code = "68199"
+         case "6823" : l_iso_class_code = "68239"
+         case "6824" : l_iso_class_code = "68249"
+         case "6825" : l_iso_class_code = "68259"
+         case "6826" : l_iso_class_code = "68269"
+         case "6827" : l_iso_class_code = "68279"
+         case "6828" : l_iso_class_code = "68289"
+         case "6829" : l_iso_class_code = "68299"
+         case "6833" : l_iso_class_code = "68339"
+         case "6834" : l_iso_class_code = "68349"
+         case "6835" : l_iso_class_code = "68359"
+         case "6836" : l_iso_class_code = "68369"
+         case "6837" : l_iso_class_code = "68379"
+         case "6838" : l_iso_class_code = "68389"
+         case "6839" : l_iso_class_code = "68399"
+         case "6843" : l_iso_class_code = "68439"
+         case "6844" : l_iso_class_code = "68449"
+         case "6845" : l_iso_class_code = "68459"
+         case "6846" : l_iso_class_code = "68469"
+         case "6847" : l_iso_class_code = "68479"
+         case "6848" : l_iso_class_code = "68489"
+         case "6849" : l_iso_class_code = "68499"
+         case "6853" : l_iso_class_code = "68539"
+         case "6854" : l_iso_class_code = "68549"
+         case "6855" : l_iso_class_code = "68559"
+         case "6856" : l_iso_class_code = "68569"
+         case "6857" : l_iso_class_code = "68579"
+         case "6858" : l_iso_class_code = "68589"
+         case "6859" : l_iso_class_code = "68599"
+         case "6863" : l_iso_class_code = "68639"
+         case "6864" : l_iso_class_code = "68649"
+         case "6865" : l_iso_class_code = "68659"
+         case "6866" : l_iso_class_code = "68669"
+         case "6867" : l_iso_class_code = "68679"
+         case "6868" : l_iso_class_code = "68689"
+         case "6869" : l_iso_class_code = "68699"
+         case "6913" : l_iso_class_code = "69139"
+         case "6914" : l_iso_class_code = "69149"
+         case "6915" : l_iso_class_code = "69159"
+         case "6916" : l_iso_class_code = "69169"
+         case "6917" : l_iso_class_code = "69179"
+         case "6918" : l_iso_class_code = "69189"
+         case "6919" : l_iso_class_code = "69199"
+         case "6923" : l_iso_class_code = "69239"
+         case "6924" : l_iso_class_code = "69249"
+         case "6925" : l_iso_class_code = "69259"
+         case "6926" : l_iso_class_code = "69269"
+         case "6927" : l_iso_class_code = "69279"
+         case "6928" : l_iso_class_code = "69289"
+         case "6929" : l_iso_class_code = "69299"
+         case "6933" : l_iso_class_code = "69339"
+         case "6934" : l_iso_class_code = "69349"
+         case "6935" : l_iso_class_code = "69359"
+         case "6936" : l_iso_class_code = "69369"
+         case "6937" : l_iso_class_code = "69379"
+         case "6938" : l_iso_class_code = "69389"
+         case "6939" : l_iso_class_code = "69399"
+         case "6943" : l_iso_class_code = "69439"
+         case "6944" : l_iso_class_code = "69449"
+         case "6945" : l_iso_class_code = "69459"
+         case "6946" : l_iso_class_code = "69469"
+         case "6947" : l_iso_class_code = "69479"
+         case "6948" : l_iso_class_code = "69489"
+         case "6949" : l_iso_class_code = "69499"
+         case "6953" : l_iso_class_code = "69539"
+         case "6954" : l_iso_class_code = "69549"
+         case "6955" : l_iso_class_code = "69559"
+         case "6956" : l_iso_class_code = "69569"
+         case "6957" : l_iso_class_code = "69579"
+         case "6958" : l_iso_class_code = "69589"
+         case "6959" : l_iso_class_code = "69599"
+         case "6963" : l_iso_class_code = "69639"
+         case "6964" : l_iso_class_code = "69649"
+         case "6965" : l_iso_class_code = "69659"
+         case "6966" : l_iso_class_code = "69669"
+         case "6967" : l_iso_class_code = "69679"
+         case "6968" : l_iso_class_code = "69689"
+         case "6969" : l_iso_class_code = "69699"
+         case "7391" : l_iso_class_code = "7391"
+         case "7390" : l_iso_class_code = "7391"
+         case "7398" : l_iso_class_code = "7398"
+         case "7399" : l_iso_class_code = "7399"
+         case "6351" : l_iso_class_code = "6351"
+         case "6352" : l_iso_class_code = "6352"
+         case "6353" : l_iso_class_code = "6353"
+         case "6381" : l_iso_class_code = "6381"
+         case "6382" : l_iso_class_code = "6382"
+         case "6383" : l_iso_class_code = "6383"
+         case "6354" : l_iso_class_code = "6351"
+         case "6355" : l_iso_class_code = "6352"
+         case "6384" : l_iso_class_code = "6381"
+         case "6385" : l_iso_class_code = "6382"
+         case "6251" : l_iso_class_code = "6251"
+         case "6252" : l_iso_class_code = "6252"
+         case "6253" : l_iso_class_code = "6253"
+         case "6281" : l_iso_class_code = "6281"
+         case "6282" : l_iso_class_code = "6282"
+         case "6283" : l_iso_class_code = "6283"
+         case "7922" : l_iso_class_code = "7922"
+         case "7915" : l_iso_class_code = "7915"
+         default : l_iso_class_code = "99999"
+       end
+    }
+  else
+    {
+      l_class_code     = capvehicle:class_code
+      l_iso_class_code = casclass:iso_class_code
+  --    write("%c-->This should print each time iso_class_code%x<--",02021,l_iso_class_code)
+  ---    Read (23,1,"Press Enter to Continue ",L_ENTER,1)
+    }
+
+  access capdev,
+     set capdev:policy_no    = capvehicle:policy_no,
+         capdev:pol_year     = capvehicle:pol_year,
+         capdev:end_sequence = capvehicle:end_sequence, exact
+
+  if capdev:policy_no    = capvehicle:policy_no and
+     capdev:pol_year     = capvehicle:pol_year and
+     capdev:end_sequence = capvehicle:end_sequence then
+    {
+      l_total_rate_modification_factor = capDEV:EXPERIENCE[1] * capDEV:EXPERIENCE[2] * capDEV:EXPERIENCE[3] * capdev:schedule[1] * capdev:schedule[2] * capdev:schedule[3]
+    }
+  if ((capDEV:EXPERIENCE[1] + capDEV:EXPERIENCE[2] + capDEV:EXPERIENCE[3]) = 0) then   --is it experience ratined capmt004.sd
+    {
+      l_rating_id_code = "9"
+    }
+  else
+    {
+      l_rating_id_code = "1"
+    }
+--   write("%c-->iso_class_code%x<--",02021,l_iso_class_code)
+END
+
+procedure check_if_claim_was_made(number p_policy_no,
+                                  rwdate p_eff_date,
+                                  rwdate p_exp_date)
+
+BEGIN
+  access lrssetup,
+     set lrssetup:policy_no  = p_policy_no, exact
+
+  l_claims_count = 0
+  while lrssetup:policy_no = p_policy_no
+    {
+      if lrssetup:loss_date >= p_eff_date and
+         lrssetup:loss_date <= p_exp_date  then
+        {
+          l_claim_count = l_claim_count + 1
+        }
+      next lrssetup
+    }
+END
+
+procedure check_for_county(number p_state, number p_county)
+
+BEGIN
+--  unsigned ascii number l_state[2] = p_state ;
+--  unsigned ascii number l_county[3] = p_county;
+  access sfsstate,
+     set sfsstate:company_id = sfpname:company_id,
+         sfsstate:state      = p_state,
+         sfsstate:county     = p_county, generic
+
+  l_county_str  = SFSSTATE:DESCRIPTION
+END
+
+procedure fill_in_locals_by_LOB
+
+BEGIN
+  l_construction_class  = "N/A"
+  l_deductible          = ""
+  l_occupancy_type      = ""
+  l_no_units            = ""
+  l_premium             = 0
+  l_building_deductible = ""
+  l_wind_deductible     = ""
+  l_form                = ""
+  l_liability_code      = 0
+  l_coinsurance_factor  = ""
+  l_protection          = ""
+  for l_loop = 1 to 30
+    {
+      l_limit[l_loop]   = 0
+    }
+
+  switch (sfsline:lob_code)
+    case "AUTO" :  BEGIN
+                    ACCESS CAPPIP,
+                       set cappip:policy_no    = capvehicle:policy_no,
+                           cappip:pol_year     = capvehicle:pol_year,
+                           cappip:end_sequence = capvehicle:end_sequence,
+                           cappip:vehicle_no   = capvehicle:vehicle_no, exact
+                    l_Limit[14] = capvehicle:medical_payments
+                    l_Limit[6]  = sfpmaster:liability
+                    l_Limit[28] = sfpmaster:um_uim_limit[1]
+                    l_Limit[29] = sfpmaster:um_uim_limit[2]
+                    l_Limit[5]  = capPIP:MEDICAL_EXPENSE_LIMIT
+                    l_res_condo = 0
+                    l_construction_class = "N/A"
+                  END
+  }
+
+END
+
+procedure add_to_gsn_master
+
+BEGIN
+--  local file cppliability_all_locations  = alias for cppliability;
+
+  access sfsdefault,
+     set sfsdefault:sfs_code = "SFS", exact
+
+  if l_hold_policy_no    <> l_policy_no or
+     l_hold_pol_year     <> l_pol_Year or
+     l_hold_end_sequence <> l_end_sequence then
+    {
+      --put the check for deleted location here.
+      if (l_hold_policy_no <> l_policy_no and
+          l_hold_policy_no <> 0) or
+
+         (l_hold_end_sequence <> l_end_sequence and
+          l_hold_policy_no    =  l_policy_no) or
+
+         (L_hold_pol_year     <> l_pol_year and
+          l_hold_end_sequence = l_end_sequence and
+          l_hold_policy_no    =  l_policy_no) then
+        {
+--          do check_for_minimum_premium
+--          if l_hold_policy_no = 16482 then
+--            {
+--              Read (23,1,"I am in here where I am supposed to bee ",L_ENTER,1)
+--            }
+          do check_for_deleted_location
+        }
+
+      --calculate the prsmaster:total and sfplocation:totals
+      l_current_total_premium    = 0
+      L_identity_theft_only_once = 0
+      l_terrorism_only_once      = 0
+      l_sfpend_forms_only_once = 0
+      l_percent_of_prsmaster   = 0
+      l_hold_policy_no         = l_policy_no
+      l_hold_pol_Year          = l_pol_year
+      l_hold_end_sequence      = l_end_sequence
+      l_hold_prem_no           = l_prem_no
+      l_hold_build_no          = l_build_no
+      l_hold_line_of_business  = l_line_of_business
+      l_hold_lob_subline       = l_lob_subline
+      l_sub_code               = 0
+      l_do_only_once           = 0
+      l_calculate_money_once   = 0
+      l_do_terrorism_only_once = 0
+      l_misc                   = 0
+      l_liability_deductible   = ""
+      l_deductible             = ""
+      l_iso_statement_line     = ""
+      l_county_str             = ""
+      l_process_umbrella_once  = 0
+      l_liability_is_policy_wide = 0  --used for contractors to only total liabiity once
+      l_identity_theft = 0            --used for contractors to only total theft once
+    }
+
+  switch (sfpmaster:trans_code)
+    case 10 : l_policy_indicator = "NEW"
+    case 11 : l_policy_indicator = "CANCELLED"
+    case 12 : l_policy_indicator = "INCREASE COVERAGE"
+    case 13 : l_policy_indicator = "DECREASE COVERAGE"
+    case 14 : BEGIN
+                if sfpname:eff_date >= 01.25.2016 then
+                  l_policy_indicator = "RENEWAL"
+                else
+                  l_policy_indicator = "NEW"
+              END
+    case 15 : l_policy_indicator = "AUDIT"
+    case 16 : l_policy_indicator = "REINSTATEMENT"
+  END
+
+  do check_if_claim_was_made(sfpname:policy_no,sfpname:eff_date, sfpname:exp_date)
+
+  switch (sfsline:lob_code)
+    case "AUTO"     : BEGIN
+                        do check_for_county(capvehicle:state,capvehicle:county)
+                        l_year_built = 0
+                        l_state = capvehicle:state
+                        l_type_of_policy = 10
+                        do fill_in_locals_by_LOB
+                      END
+  END
+
+  if sfsline:LOB_CODE one of "AUTO" then
+    {
+      do process_AUTO    --AUTO
+    }
+end
+
+procedure process_auto
+
+BEGIN
+  signed ascii number l_exposure_temp[5] = 0;
+  access sfsline_by_subline,
+     set sfsline_by_subline:company_id       = sfsline:company_id,
+         sfsline_by_subline:line_of_business = sfsline:line_of_business, generic
+
+  while sfsline_by_subline:company_id       = sfsline:company_id and
+        sfsline_by_subline:line_of_business = sfsline:line_of_business
+    {
+      l_lob_subline = sfsline_by_subline:lob_subline
+      l_exposure_temp = month(sfpmaster:trans_exp) - month(sfpmaster:trans_eff)
+      if (year(sfpmaster:trans_exp) - year(sfpmaster:trans_eff)) = 0 and
+         l_exposure_temp = 0 then
+        {
+          l_exposure = "1"
+        }
+      else
+        if l_exposure_temp < 0 then
+          {
+            l_exposure_temp = 12 + (month(sfpmaster:trans_exp) - month(sfpmaster:trans_eff))
+            l_exposure = str(l_exposure_temp)
+          }
+        else
+          if l_exposure_temp = 0 then
+            {
+              l_exposure = "12"  --this will give them the 12 month for a full term auto.  because the cal ubove will only give a number > 0 if a auto is taken off or on a policy else it should be 12.
+            }
+
+      l_state_exception_code = "N/A"
+      l_anti_theft_code = ""
+      l_num_vehicle = 0
+      l_pip_deductible_code = ""
+      l_pip_rating_basis_code = ""
+
+      switch (sfsline_by_subline:lob_code)
+         case "LIAB"  : begin      --policy_level
+                          l_iso_policy_limits_code = find_iso_policy_limit_code(sfpmaster:liability,0)
+                          do process_deductible_code
+                          l_premium = capvehicle:vehicle_totals[1]
+                          do calculate_state_exception_code_auto_liability
+                          l_limit_id = "01"
+                          do gsn_master_add
+                         end
+/*        case "LIABTORT"  : begin      --add 10/22/2013
+                             l_iso_policy_limits_code = find_iso_policy_limit_code(sfpmaster:liability,0)
+                             do process_deductible_code
+                             l_premium = capvehicle:vehicle_totals[1]
+                             do calculate_state_exception_code_auto_liability
+                             l_limit_id = "01"
+                             do gsn_master_add
+                           end  */
+
+        case "TERROR"  : begin
+                           do calculate_state_exception_code_auto_no_fault
+                           l_premium = sfpmaster:terrorism_premium
+                           do gsn_master_add
+                         end
+        case "COMP"  : begin
+                           l_state_exception_code = "9"
+                           l_anti_theft_code = "9"
+                           l_premium = capvehicle:vehicle_totals[7]
+                           do process_coverage_code_comprehensive   --gets coverage code
+                           do calculate_state_exception_code_auto_no_fault
+                           do process_age_code
+                           do gsn_master_add
+                         end
+        case "COLL"  : begin
+                         l_state_exception_code = "9"
+                         l_anti_theft_code = "9"
+                         l_premium = capvehicle:vehicle_totals[8]
+                         do calculate_state_exception_code_auto_no_fault
+                         do process_coverage_code_collision
+                         do process_age_code
+                         do gsn_master_add
+                       end
+        case "TOW"  : begin
+                        l_state_exception_code = "9"
+                        do calculate_state_exception_code_auto_no_fault
+                        l_anti_theft_code = "9"
+                        l_premium = capvehicle:vehicle_totals[10]
+                        do gsn_master_add
+                      end
+        case "RENT"  : begin
+                         l_state_exception_code = "9"
+                         l_anti_theft_code = "9"
+                         do calculate_state_exception_code_auto_no_fault
+                         if capVEHICLE:RENTAL_DAYS > 0 then
+                           {
+                             l_coverage_code = "047"
+                           }
+                         l_premium = capvehicle:vehicle_totals[9]
+                         do gsn_master_add
+                       end
+        case "UMUIM"  : begin
+                          l_pip_limit_code = ""
+                          l_iso_policy_limits_code = find_iso_policy_limit_code(sfpmaster:liability,0)
+                           l_premium = capvehicle:vehicle_totals[3] + capvehicle:vehicle_totals[17]
+                           do calculate_state_exception_code_auto_liability
+                           do gsn_master_add
+                         end
+        case "MEDPAY"  : begin
+                           l_iso_policy_limits_code = find_iso_policy_limit_code(capVEHICLE:MEDICAL_PAYMENTS,1)
+                           l_premium = capvehicle:vehicle_totals[2]
+                           do Process_pip_rating_basis_code
+                           do process_deductible_code
+                           do gsn_master_add
+                         end
+        case "BPIP"  : begin
+                           l_premium = capvehicle:vehicle_totals[5]
+                           l_state_exception_code = "N/A"
+                           do process_pip_limit_code
+                           do process_deductible_code
+                           do Process_pip_rating_basis_code
+                           do gsn_master_add
+                         end
+        case "BRPIP"  : begin
+                         -- 04012016 if L_BRPIP_only_once = 0 then
+                            {
+                              L_BRPIP_only_once = 1
+                              do broaded_pip
+                              do process_deductible_code
+                              do process_pip_limit_code
+                              do Process_pip_rating_basis_code
+                              l_state_exception_code = "N/A"
+                              l_premium = l_broadened_pip
+                              do gsn_master_add
+                            }
+                         end
+        case "ADDLPIP"  : begin
+                           l_premium = capvehicle:vehicle_totals[6]
+                           do process_pip_limit_code
+                           l_state_exception_code = "N/A"
+                           do Process_pip_rating_basis_code
+                           do process_deductible_code
+                           do gsn_master_add
+                         end
+
+         case "PEDPIP"  : begin
+                            l_state_exception_code = "N/A"
+                           do process_pip_limit_code
+                           do Process_pip_rating_basis_code
+                           l_premium = capvehicle:vehicle_totals[4]
+                           do gsn_master_add
+                         end
+         case "MEDEXP"  : begin
+                            l_iso_policy_limits_code = find_iso_policy_limit_code(sfpmaster:liability,0)
+                            l_state_exception_code = "N/A"
+                           l_premium = capvehicle:vehicle_totals[13]
+                            do calculate_state_exception_code_auto_liability
+                           do gsn_master_add
+                         end
+         case "MISC"  : begin  --policy_level only do it once
+                           l_pip_limit_code = ""
+                           l_iso_policy_limits_code = find_iso_policy_limit_code(sfpmaster:liability,0)
+                           l_premium = sfpmaster:total[18] + sfpmaster:total[15]
+                           do calculate_state_exception_code_auto_liability
+                           do gsn_master_add
+                         end
+         case "EXPIP"  : begin
+                           l_state_exception_code = "N/A"
+                           do process_pip_limit_code
+                           do Process_pip_rating_basis_code
+                           do process_deductible_code
+                           l_premium = capvehicle:vehicle_totals[11]
+                           do gsn_master_add
+                         end
+         case "HIRED"  : begin    --policy level
+                           l_pip_limit_code = ""
+                           if l_hired_only_once = 0 then
+                             {
+                               l_iso_policy_limits_code = find_iso_policy_limit_code(sfpmaster:liability,0)
+                               do process_deductible_code
+                               do calculate_state_exception_code_auto_liability
+                               l_hired_only_once = 1
+                               l_premium = sfpmaster:other_totals[3]
+                               do gsn_master_add
+                             }
+                         end
+         case "HIREDCOMP"  : begin  --policy level
+                               if l_hiredcomp_only_once = 0 then
+                                {
+                                  l_iso_policy_limits_code = find_iso_policy_limit_code(sfpmaster:liability,0)
+                                  do calculate_state_exception_code_auto_liability
+                                  l_hiredcomp_only_once = 1
+                                  l_premium = sfpmaster:other_totals[4]
+                                  do gsn_master_add
+                                }
+                         end
+         case "NONOWNED"  : begin   --policy level
+                              if l_nonowned_only_once = 0 then
+                                {
+                                  l_iso_policy_limits_code = find_iso_policy_limit_code(sfpmaster:liability,0)
+                                  l_pip_limit_code = ""
+                                  do process_deductible_code
+                                  do calculate_state_exception_code_auto_liability
+                                  l_nonowned_only_once = 1
+                                  l_premium = sfpmaster:total[11]
+                                  do gsn_master_add
+                                }
+                         end
+         case "NONMEDPAY"  : begin --policy level
+                               if l_nonmedpay_only_once = 0 then
+                                 {
+                                   do calculate_state_exception_code_auto_liability
+                                   l_nonmedpay_only_once = 1
+                                   l_iso_policy_limits_code = find_iso_policy_limit_code(sfpmaster:liability,0)
+                                   l_premium = sfpmaster:other_totals[6]
+                                   do gsn_master_add
+                                 }
+
+                         end
+         case "NONLIAB"  : begin      --policy level
+                             if l_nonliab_only_once = 0 then
+                               {
+                                 l_nonliab_only_once = 1
+                                 do calculate_state_exception_code_auto_liability
+                                 l_iso_policy_limits_code = find_iso_policy_limit_code(sfpmaster:liability,0)
+                                 l_premium = sfpmaster:other_totals[7]
+                                 do gsn_master_add
+                               }
+                         end
+         case "DOC"  : begin      --policy level
+                           if l_doc_only_once = 0 then
+                             {
+                               l_iso_policy_limits_code = find_iso_policy_limit_code(sfpmaster:liability,0)
+                               l_premium = sfpmaster:other_totals[1]
+                               do process_deductible_code
+                               l_doc_only_once = 1
+                               do calculate_state_exception_code_auto_liability
+                               do gsn_master_add
+                             }
+                       end
+         case "DOCLIAB"  : begin      --policy level
+                          -- 04012016  if l_docliab_only_once = 0 then
+                               {
+                                 l_iso_policy_limits_code = find_iso_policy_limit_code(sfpmaster:liability,0)
+                                 do process_deductible_code
+                                 do calculate_state_exception_code_auto_liability
+                                 l_docliab_only_once = 1
+                                 l_premium = sfpmaster:other_totals[2]
+                                 do gsn_master_add
+                               }
+                         end
+         case "SOUND"  : begin      --policy_level
+                           l_state_exception_code = "9"
+                           l_anti_theft_code = "9"
+                           l_coverage_code = ""
+                           do calculate_state_exception_code_auto_no_fault
+                           access sfpend1,
+                              set sfpend1:policy_no    = capvehicle:policy_no,
+                                  sfpend1:pol_year     = capvehicle:pol_year,
+                                  sfpend1:end_sequence = capvehicle:end_sequence,
+                                  sfpend1:VEHICLE_NO   = capvehicle:vehicle_no, generic
+
+                           while sfpend1:policy_no    = capvehicle:policy_no and
+                                 sfpend1:pol_year     = capvehicle:pol_year and
+                                 sfpend1:end_sequence = capvehicle:end_sequence and
+                                 sfpend1:vehicle_no   = capvehicle:vehicle_no
+                             {
+                               if sfpend1:code one of "MCA201" then
+                                 {
+                                   l_coverage_code = "017"
+                                 }
+                               next sfpend1
+                             }
+                           l_premium = sfpmaster:other_totals[15]
+                           do gsn_master_add
+                         end
+         case "GAP"  : begin      --policy_level
+                         l_anti_theft_code = "9"
+                         l_state_exception_code = "9"
+                         do calculate_state_exception_code_auto_no_fault
+                         l_coverage_code = ""
+                         access sfpend1,
+                            set sfpend1:policy_no    = capvehicle:policy_no,
+                                sfpend1:pol_year     = capvehicle:pol_year,
+                                sfpend1:end_sequence = capvehicle:end_sequence,
+                                sfpend1:vehicle_no   = capvehicle:vehicle_no, generic
+
+                         while sfpend1:policy_no    = capvehicle:policy_no and
+                               sfpend1:pol_year     = capvehicle:pol_year and
+                               sfpend1:end_sequence = capvehicle:end_sequence and
+                               sfpend1:vehicle_no   = capvehicle:vehicle_no
+                           {
+                             if sfpend1:code one of "MCA601" then
+                               {
+                                 l_coverage_code = "801"
+                               }
+                             next sfpend1
+                           }
+                         l_premium = sfpmaster:other_totals[14]
+                         do gsn_master_add
+                         end
+         case "PACKAGE"  : begin      --policy_level
+                             if l_package_only_once = 1 then
+                               {
+                                 l_iso_policy_limits_code = find_iso_policy_limit_code(sfpmaster:liability,0)
+                                 do calculate_state_exception_code_auto_liability
+                                 l_package_only_once = 0
+                                 l_premium = sfpmaster:other_totals[20]
+                                 do gsn_master_add
+                               }
+                           end
+
+       end
+      next  sfsline_by_subline
+    }
+END
+
+string function find_iso_policy_limit_code(number p_limit, number p_med_pay)
+
+begin
+  local string l_return_str[2] = "";
+  if p_med_pay = 0 then
+    {
+      switch (p_limit)
+        case 0       : l_return_str = "01"
+        case 25000   : l_return_str = "05"
+        case 35000   : l_return_str = "07"
+        case 100000  : l_return_str = "10"
+        case 300000  : l_return_str = "14"
+        case 500000  : l_return_str = "16"
+        case 1000000 : l_return_str = "18"
+      end
+    }
+  else   --medpay iso subline 620
+    {
+      switch (p_limit)
+        case 0,500   : l_return_str = "01"
+        case 1000    : l_return_str = "03"
+        case 2000    : l_return_str = "04"
+        case 5000    : l_return_str = "06"
+      end
+    }
+  return l_return_str
+END
+
+
+procedure Process_pip_rating_basis_code
+
+BEGIN
+  if capvehicle:state one of 37 then
+    {
+      if capVEHICLE:TYPE = 1 and
+         sfpmaster:covered_by_workers_comp = "Y" then
+        {
+          l_pip_rating_basis_code = "3"
+        }
+      else
+        if capVEHICLE:TYPE = 1 and
+           sfpmaster:covered_by_workers_comp = "N" then
+          {
+            l_pip_rating_basis_code = "4"
+          }
+        else
+          if capVEHICLE:TYPE = 2 and               --private passenger
+             capVEHICLE:NON_EMPLOYEE = "Y" then
+            {
+              l_pip_rating_basis_code = "1"
+            }
+          else
+            if capVEHICLE:TYPE = 2 and               --private passenger
+               capVEHICLE:NON_EMPLOYEE = "N" then
+              {
+                l_pip_rating_basis_code = "2"
+              }
+            else
+              {
+                l_pip_rating_basis_code = "2"
+              }
+    }
+  else
+    if capvehicle:state one of 29 then
+      {
+        ACCESS CAPPIP,
+           set cappip:policy_no    = capvehicle:policy_no,
+               cappip:pol_year     = capvehicle:pol_year,
+               cappip:end_sequence = capvehicle:end_sequence,
+               cappip:vehicle_no   = capvehicle:vehicle_no, exact
+
+        if capVEHICLE:TYPE = 2 and         --private passager
+           capPIP:SECONDARY_OPTION = "Y" and    --medical_expense benefits as secondary_options
+           capVEHICLE:NON_EMPLOYEE = "Y" then   --Not Principally oPerated by employee
+          {
+            l_pip_rating_basis_code = "4"
+          }
+        else
+          if capVEHICLE:TYPE = 2 and                --private passager
+             capPIP:SECONDARY_OPTION = "Y" and     --medical_expense benefits as secondary_options
+             capVEHICLE:NON_EMPLOYEE = "N" then    --principally operated by employee
+            {
+              l_pip_rating_basis_code = "3"
+            }
+          else
+            if capVEHICLE:TYPE = 2 and                --private passager
+               capPIP:SECONDARY_OPTION = "N" and    --medical_expense benefits as primary options
+               capVEHICLE:NON_EMPLOYEE = "Y" then   --Not Principally oPerated by employee
+              {
+                l_pip_rating_basis_code = "2"
+              }
+            else
+              if capVEHICLE:TYPE         = 2 and                --private passager
+                 capPIP:SECONDARY_OPTION = "N" and    --medical_expense benefits as primary options
+                 capVEHICLE:NON_EMPLOYEE = "N" then   --Principally oPerated by employee
+                {
+                  l_pip_rating_basis_code = "1"
+                }
+              else
+                l_pip_rating_basis_code = "0"
+      }
+END
+
+procedure process_deductible_code
+
+BEGIN
+  if capvehicle:state one of 29 then
+    {
+      l_pip_deductible_code = "5"
+    }
+  else if capvehicle:state one of 37 then
+    {
+      l_pip_deductible_code = "1"
+    }
+END
+
+procedure process_pip_limit_code
+
+BEGIN
+  Access capPIP,
+     Set capPIP:policy_NO     = capvehicle:policy_NO,
+         cappip:pol_year      = capvehicle:pol_year,
+         cappip:end_sequence  = capvehicle:end_sequence,
+         cappip:vehicle_no    = capvehicle:vehicle_no, exact
+
+  l_pip_limit_code = ""
+
+
+  if capvehicle:state = 29 then
+    {
+      if capPIP:ADDITIONAL_PIP_OPTION <> 0 then
+        {
+          l_pip_limit_code = str(capPIP:ADDITIONAL_PIP_OPTION + 29)        --add 29 to option to get code
+        }
+      else
+        {
+          if capPIP:MEDICAL_EXP_MOTOR_BUS = "Y" then
+            {
+              l_pip_limit_code = "47"
+            }
+          else
+            if capPIP:DELETION_OF_BENEFITS = "Y" then
+              {
+                l_pip_limit_code = "25"
+              }
+            else
+              if capPIP:PEDESTRIAN = "Y" then
+                {
+                  l_pip_limit_code = "26"
+                }
+              else
+                {
+                  l_pip_limit_code = "01"   --basic
+                }
+        }
+    }
+  else
+    {
+      if capvehicle:state one of 37 then
+        {
+          Access capPANOFAULT,
+             Set capPANOFAULT:policy_NO    = capvehicle:policy_NO ,
+                 cappanofault:pol_year     = capvehicle:pol_year,
+                 cappanofault:end_sequence = capvehicle:end_sequence,
+                 capPANOFAULT:VEHICLE_NO   = capvehicle:VEHICLE_NO, exact
+
+          switch (capPANOFAULT:MEDICAL_EXPENSE_LIMIT)
+            case 5000 : switch (capPANOFAULT:WORK_LOSS_TOTAL_LIMIT)
+                          case 0 : switch (capPANOFAULT:ACCIDENT_LIMIT)
+                                      case 0     : switch (capPANOFAULT:FUNERAL_LIMIT)
+                                                     case 0 : l_pip_limit_code = "06"
+                                                     default : l_pip_limit_code = "56"
+                                                   end
+                                      case 5000  : l_pip_limit_code = "57"
+                                      case 10000 : l_pip_limit_code = "58"
+                                      case 25000 : l_pip_limit_code = "59"
+                                    end
+                          case 5000 : switch (capPANOFAULT:ACCIDENT_LIMIT)
+                                         case 0     : l_pip_limit_code = "40"
+                                         case 5000  : l_pip_limit_code = "41"
+                                         case 10000 : l_pip_limit_code = "42"
+                                         case 25000 : l_pip_limit_code = "43"
+                                       end
+                          case 15000 : switch (capPANOFAULT:ACCIDENT_LIMIT)
+                                          case 0     : l_pip_limit_code = "44"
+                                          case 5000  : l_pip_limit_code = "45"
+                                          case 10000 : l_pip_limit_code = "46"
+                                          case 25000 : l_pip_limit_code = "47"
+                                        end
+                          case 25000 : switch (capPANOFAULT:ACCIDENT_LIMIT)
+                                          case 0     : l_pip_limit_code = "48"
+                                          case 5000  : l_pip_limit_code = "49"
+                                          case 10000 : l_pip_limit_code = "50"
+                                          case 25000 : l_pip_limit_code = "51"
+                                        end
+                          case 50000 :  switch (capPANOFAULT:ACCIDENT_LIMIT)
+                                          case 0     : l_pip_limit_code = "52"
+                                          case 5000  : l_pip_limit_code = "53"
+                                          case 10000 : l_pip_limit_code = "54"
+                                          case 25000 : l_pip_limit_code = "55"
+                                        end
+                        end
+            case 10000 : switch (capPANOFAULT:WORK_LOSS_TOTAL_LIMIT)
+                           case 0 : switch (capPANOFAULT:ACCIDENT_LIMIT)
+                                      case 0     : l_pip_limit_code = "36"
+                                      case 5000  : l_pip_limit_code = "37"
+                                      case 10000 : l_pip_limit_code = "38"
+                                      case 25000 : l_pip_limit_code = "39"
+                                    end
+
+                           case 5000 : switch (capPANOFAULT:ACCIDENT_LIMIT)
+                                      case 0     : switch (capPANOFAULT:FUNERAL_LIMIT)
+                                                     case 0 : l_pip_limit_code = "07"
+                                                     case 1500 : l_pip_limit_code = "19"
+                                                     default : l_pip_limit_code = "20"
+                                                   end
+                                      case 5000  : l_pip_limit_code = "21"
+                                      case 10000 : l_pip_limit_code = "22"
+                                      case 25000 : l_pip_limit_code = "23"
+                                    end
+                           case 15000 : switch (capPANOFAULT:ACCIDENT_LIMIT)
+                                      case 0     : l_pip_limit_code = "24"
+                                      case 5000  : l_pip_limit_code = "25"
+                                      case 10000 : l_pip_limit_code = "26"
+                                      case 25000 : l_pip_limit_code = "27"
+                                    end
+                           case 25000 : switch (capPANOFAULT:ACCIDENT_LIMIT)
+                                      case 0     : l_pip_limit_code = "28"
+                                      case 5000  : l_pip_limit_code = "29"
+                                      case 10000 : l_pip_limit_code = "30"
+                                      case 25000 : l_pip_limit_code = "31"
+                                    end
+                           case 50000 : switch (capPANOFAULT:ACCIDENT_LIMIT)
+                                      case 0     : l_pip_limit_code = "32"
+                                      case 5000  : l_pip_limit_code = "33"
+                                      case 10000 : l_pip_limit_code = "34"
+                                      case 25000 : l_pip_limit_code = "35"
+                                    end
+                         end
+            case 25000 : switch (capPANOFAULT:WORK_LOSS_TOTAL_LIMIT)
+                           case 0 : switch (capPANOFAULT:ACCIDENT_LIMIT)
+                                      case 0     : l_pip_limit_code = "60"
+                                      case 5000  : l_pip_limit_code = "61"
+                                      case 10000 : l_pip_limit_code = "62"
+                                      case 25000 : l_pip_limit_code = "63"
+                                    end
+                           case 5000 :switch (capPANOFAULT:ACCIDENT_LIMIT)
+                                      case 0     : l_pip_limit_code = "64"
+                                      case 5000  : l_pip_limit_code = "65"
+                                      case 10000 : l_pip_limit_code = "66"
+                                      case 25000 : l_pip_limit_code = "67"
+                                    end
+                           case 15000 : switch (capPANOFAULT:ACCIDENT_LIMIT)
+                                      case 0     : l_pip_limit_code = "68"
+                                      case 5000  : l_pip_limit_code = "69"
+                                      case 10000 : l_pip_limit_code = "70"
+                                      case 25000 : l_pip_limit_code = "71"
+                                    end
+                           case 25000 : switch (capPANOFAULT:ACCIDENT_LIMIT)
+                                      case 0     : l_pip_limit_code = "72"
+                                      case 5000  : l_pip_limit_code = "73"
+                                      case 10000 : l_pip_limit_code = "74"
+                                      case 25000 : l_pip_limit_code = "75"
+                                    end
+                           case 50000 :switch (capPANOFAULT:ACCIDENT_LIMIT)
+                                      case 0     : l_pip_limit_code = "76"
+                                      case 5000  : l_pip_limit_code = "77"
+                                      case 10000 : l_pip_limit_code = "78"
+                                      case 25000 : l_pip_limit_code = "79"
+                                    end
+                         end
+            case 50000 : switch (capPANOFAULT:WORK_LOSS_TOTAL_LIMIT)
+                           case 0 : switch (capPANOFAULT:ACCIDENT_LIMIT)
+                                      case 0     : l_pip_limit_code = "60"
+                                      case 5000  : l_pip_limit_code = "61"
+                                      case 10000 : l_pip_limit_code = "62"
+                                      case 25000 : l_pip_limit_code = "63"
+                                    end
+                           case 5000 :switch (capPANOFAULT:ACCIDENT_LIMIT)
+                                      case 0     : l_pip_limit_code = "64"
+                                      case 5000  : l_pip_limit_code = "65"
+                                      case 10000 : l_pip_limit_code = "66"
+                                      case 25000 : l_pip_limit_code = "67"
+                                    end
+                           case 15000 : switch (capPANOFAULT:ACCIDENT_LIMIT)
+                                      case 0     : l_pip_limit_code = "68"
+                                      case 5000  : l_pip_limit_code = "69"
+                                      case 10000 : l_pip_limit_code = "70"
+                                      case 25000 : l_pip_limit_code = "71"
+                                    end
+                           case 25000 : switch (capPANOFAULT:ACCIDENT_LIMIT)
+                                      case 0     : l_pip_limit_code = "72"
+                                      case 5000  : l_pip_limit_code = "73"
+                                      case 10000 : l_pip_limit_code = "74"
+                                      case 25000 : l_pip_limit_code = "75"
+                                    end
+                           case 50000 :switch (capPANOFAULT:ACCIDENT_LIMIT)
+                                      case 0     : l_pip_limit_code = "76"
+                                      case 5000  : l_pip_limit_code = "77"
+                                      case 10000 : l_pip_limit_code = "78"
+                                      case 25000 : l_pip_limit_code = "79"
+                                    end
+                         end
+
+            case 100000 : switch (capPANOFAULT:WORK_LOSS_TOTAL_LIMIT)
+                           case 0 : switch (capPANOFAULT:ACCIDENT_LIMIT)
+                                      case 0     : l_pip_limit_code = "96"
+                                      case 5000  : l_pip_limit_code = "16"
+                                      case 10000 : l_pip_limit_code = "17"
+                                      case 25000 : l_pip_limit_code = "18"
+                                    end
+                           case 5000 :switch (capPANOFAULT:ACCIDENT_LIMIT)
+                                      case 0     : l_pip_limit_code = "80"
+                                      case 5000  : l_pip_limit_code = "81"
+                                      case 10000 : l_pip_limit_code = "82"
+                                      case 25000 : l_pip_limit_code = "83"
+                                    end
+                           case 15000 : switch (capPANOFAULT:ACCIDENT_LIMIT)
+                                      case 0     : l_pip_limit_code = "88"
+                                      case 5000  : l_pip_limit_code = "89"
+                                      case 10000 : l_pip_limit_code = "90"
+                                      case 25000 : l_pip_limit_code = "91"
+                                    end
+                           case 25000 : switch (capPANOFAULT:ACCIDENT_LIMIT)
+                                      case 0     : l_pip_limit_code = "92"
+                                      case 5000  : l_pip_limit_code = "93"
+                                      case 10000 : l_pip_limit_code = "94"
+                                      case 25000 : l_pip_limit_code = "95"
+                                    end
+                          end
+
+          end
+        }
+    }  --else
+END
+
+/*
+
+procedure process_medical_expense
+
+BEGIN
+  Access capPIP,
+     Set capPIP:policy_NO    = capvehicle:policy_NO,
+         cappip:pol_year     = capvehicle:pol_year,
+         cappip:end_sequence = capvehicle:end_sequence,
+         cappip:vehicle_no   = capvehicle:vehicle_no, exact
+
+  l_pip_limit_code = "0"
+
+  if capPIP:MEDICAL_EXP_MOTOR_BUS = "Y" then
+    {
+      l_pip_limit_code = "47"        --add 29 to option to get code
+    }
+  else
+    if capPIP:DELETION_OF_BENEFITS = "Y" then
+      {
+        l_pip_limit_code = "25"        --add 29 to option to get code
+      }
+    else
+      if capPIP:ADDITIONAL_PIP = "Y" then
+        {
+          l_pip_limit_code = str(capPIP:ADDITIONAL_PIP_OPTION + 29)   --to convert to MSO state code
+        }
+      else
+        if capPIP:PEDESTRIAN = "Y" then
+          {
+            l_pip_limit_code = "26"        --add 29 to option to get code
+          }
+END*/
+
+procedure process_coverage_code_comprehensive   --physical damage
+
+BEGIN
+  if capVEHICLE:TOWING = "Y" then
+    {
+      switch (capVEHICLE:COMP_DEDUCTIBLE)
+        case 50   : l_coverage_code = "061"
+        case 100  : l_coverage_code = "065"
+        case 250  : l_coverage_code = "066"
+        case 500  : l_coverage_code = "722"
+        case 1000 : l_coverage_code = "723"
+        default : l_coverage_code = "909"       --2000,3000
+      end
+    }
+  else
+    {
+      switch (capVEHICLE:COMP_DEDUCTIBLE)
+        case 1    : l_coverage_code = "001"
+        case 50   : l_coverage_code = "003"
+        case 100  : l_coverage_code = "010"
+        case 250  : l_coverage_code = "055"
+        case 500  : l_coverage_code = "726"
+        case 1000 : l_coverage_code = "727"
+        case 2000 : l_coverage_code = "731"
+        default : l_coverage_code = "735"     --3000
+      end
+    }
+END
+
+procedure process_coverage_code_collision   --physical damage
+
+BEGIN
+  switch (capVEHICLE:COll_DEDUCTIBLE)
+    case 100  : l_coverage_code = "074"
+    case 150  : l_coverage_code = "075"
+    case 200  : L_coverage_code = "073"
+    case 250  : l_coverage_code = "076"
+    case 500  : l_coverage_code = "077"
+    case 1000 : l_coverage_code = "078"
+    case 2000 : l_coverage_code = "084"
+    default : l_coverage_code = "101"   --3000
+  end
+END
+
+
+procedure process_age_code
+
+BEGIN
+  switch (year)
+    case year(l_starting_date) : l_age_code = "1"
+    case year(l_starting_date - 1) : l_age_code = "2"
+    case year(l_starting_date - 2) : l_age_code = "3"
+    case year(l_starting_date - 3) : l_age_code = "4"
+    case year(l_starting_date - 4) : l_age_code = "5"
+    case year(l_starting_date - 5) : l_age_code = "A"
+    case year(l_starting_date - 6) : l_age_code = "B"
+    case year(l_starting_date - 7) : l_age_code = "C"
+    case year(l_starting_date - 8) : l_age_code = "D"
+    case year(l_starting_date - 9) : l_age_code = "E"
+    case year(l_starting_date - 10) : l_age_code = "F"
+    default :  l_age_code = "X"
+  end
+END
+
+
+procedure calculate_state_exception_code_auto_liability                         --iso subline 611 only
+
+BEGIN
+  switch(capvehicle:state)
+    case  7  : l_state_exception_code = "N/A"
+    case  29 : l_state_exception_code = "4"
+    case  37 : switch(sfpmaster:non_stacked)
+                 case "N" : l_state_exception_code = "9"
+                 case "S" : begin
+                              l_num_vehicle = 0
+                              l_num_vehicle = calculate_number_of_vehicle(capvehicle:policy_no,capvehicle:pol_year,capvehicle:end_sequence)
+                              switch(l_num_vehicle)
+                                case 1 :  l_state_exception_code = "A"
+                                case 2 :  l_state_exception_code = "B"
+                                case 3,4 : l_state_exception_code = "C"
+                                case 5,6,7,8,9 : l_state_exception_code = "D"
+                                case 10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30 : l_state_exception_code = "E"
+                                default : l_state_exception_code = "F"
+                              end
+                           end
+               end
+  end
+END
+
+procedure calculate_state_exception_code_auto_no_fault
+
+BEGIN
+  switch(capvehicle:state)
+    case  7  : l_state_exception_code = "N/A"
+    case  29 : l_state_exception_code = "9"          --nofault 618 only
+    case  37 : l_state_exception_code = "N/A"        --nofault 618 only
+  end
+END
+
+number function calculate_number_of_vehicle(number p_policy_no,
+                                            number p_pol_year,
+                                            number p_end_sequence)
+
+BEGIN
+    access cal_num_of_vehicle,
+       set cal_num_of_vehicle:policy_no    = p_policy_no,
+           cal_num_of_vehicle:pol_year     = p_pol_year,
+           cal_num_of_vehicle:end_sequence = p_end_sequence, generic
+
+    while  cal_num_of_vehicle:policy_no    = p_policy_no and
+           cal_num_of_vehicle:pol_year     = p_pol_year and
+           cal_num_of_vehicle:end_sequence = p_end_sequence
+      {
+        l_num_vehicle = l_num_vehicle + 1
+        next cal_num_of_vehicle
+      }
+    return l_num_vehicle
+END
+
+procedure broaded_pip
+
+BEGIN
+  access capdoc,
+     set capdoc:policy_no    = l_policy_no,
+         capdoc:pol_year     = l_pol_year,
+         capdoc:end_sequence = l_end_sequence, generic
+
+  l_broadened_pip = 0
+  while capdoc:policy_no    = l_policy_no and
+        capdoc:pol_year     = l_pol_year and
+        capdoc:end_sequence = l_end_sequence
+    {
+      l_broadened_pip = l_broadened_pip + capdoc:broadened_premium
+      next capdoc
+    }
+END
+
+Procedure PRO_RATA
+
+Begin
+  I_EFF_DATE = Dateadd(sfpmaster_check_endorsement:TRANS_EXP,0,-1)
+  I_SHORT_RATE = sfpmaster_check_endorsement:SHORT_RATE
+  I_TOTAL_DAYS = I_EFF_DATE - sfpmaster_check_endorsement:TRANS_EXP
+  I_CX_DAYS = I_EFF_DATE - sfpmaster_check_endorsement:TRANS_EFF
+  Include "prorata.pro"
+End
+
+
+procedure check_for_deleted_location
+
+--this procedure will access the gsn_master file and check to see if the prior endorsement
+--  to the current endorsement has any missing locations/coverages.
+
+BEGIN
+local file gsn_master_prior = alias for gsn_master;
+local file sfpname_current = alias for sfpname;
+local file sfpmaster_current = alias for sfpmaster;
+
+local signed ascii number l_difference[9] = 0;
+--                          l_save_prem_no[4],
+--                          l_save_build_no[4];
+
+--local array [10] of unsigned ascii number l_saved_subline[4];
+local unsigned ascii number L_current_trans_code[2],
+                            l_prior_end_sequence[4] ;
+
+wdate l_trans_date,
+      l_policy_eff_date,
+      l_trans_eff_date,
+      l_trans_exp_date,
+      l_policy_exp_date;
+
+access gsn_master_loop,
+   set gsn_master_loop:policy_no        = l_hold_policy_no,
+       gsn_master_loop:pol_year         = l_hold_pol_year,
+       gsn_master_loop:end_sequence     = l_hold_end_sequence, generic      --use the current endorsement to access when the endorsement in the the same as the l_endorsement and the pol_year and policy is the same
+
+--I need to find the previous end_sequence.  it will not always be end_sequence -1 so If I go previous here I can save the previous end_sequence and then access it with the correct end_sequence.
+--I only need to check the prior endorsment no others are needed because this is done every time a policy endorsement is finished.
+
+while gsn_master_loop:policy_no        = l_hold_policy_no and
+      gsn_master_loop:pol_year         = l_hold_pol_year and
+      gsn_master_loop:end_sequence     = l_hold_end_sequence and
+      gsn_master_loop:end_sequence     >= 0
+  {
+    previous gsn_master_loop
+    l_prior_end_sequence = gsn_master_loop:end_sequence   --need to save this to use later so I know the end_sequence to check with.
+  }
+
+
+
+      if l_hold_policy_no = 16482 then
+        {
+          write("%c<014>%S%x",01001,"l_policy_no",l_policy_no)
+          write("%c%S%x",02001,"l_pol_year",l_pol_year)
+          write("%c%S%x",03001,"l_end_sequence",l_end_sequence)
+          write("%c%S%x",04001,"l_holdpolicy_no",l_hold_policy_no)
+          write("%c%S%x",05001,"l_hold pol_year",l_hold_pol_year)
+          write("%c%S%x",06001,"l_hold end_sequence",l_hold_end_sequence)
+          write("%c%S%x",07001,"l_prior_end_sequence",l_prior_end_sequence)
+--          Read (23,1,"Press Enter to Continue ",L_ENTER,1)
+        }
+
+
+if gsn_master_loop:policy_no        = l_hold_policy_no and   --make sure there is a prior to add something from.
+   gsn_master_loop:pol_year         = l_hold_pol_year then
+  {
+--    l_prior_end_sequence = gsn_master_loop:end_sequence    --need to save this to use later so I know the end_sequence to check with.
+
+    --I have to loop from all the location of the prior record and compare it to the one that was just entered to see if there are any deleted location
+    --If I find something that is not in the current endorsement then I need to add the prior record into the current and put it as a negative premium
+
+    access gsn_master_current,
+       set gsn_master_current:policy_no    = l_hold_policy_no,
+           gsn_master_current:pol_year     = l_hold_pol_year,
+           gsn_master_current:end_sequence = l_hold_end_sequence, generic
+
+    access sfpname_current,
+       set sfpname_current:policy_no    = l_hold_policy_no,
+           sfpname_current:pol_year     = l_hold_pol_year,
+           sfpname_current:end_sequence = l_hold_end_sequence, generic
+
+    access sfpmaster_current,
+       set sfpmaster_current:policy_no    = l_hold_policy_no,
+           sfpmaster_current:pol_year     = l_hold_pol_year,
+           sfpmaster_current:end_sequence = l_hold_end_sequence, generic
+
+    --I need to get the dates of the current endorsement and save them so I can then add them back in when I add in the missing location with the current endorsments dates.
+
+    if gsn_master_current:policy_no    = l_hold_policy_no and
+       gsn_master_current:pol_year     = l_hold_pol_year and
+       gsn_master_current:end_sequence = l_hold_end_sequence then
+      {
+        l_current_trans_code  = gsn_master_current:trans_code
+        l_trans_date          = gsn_master_current:trans_date
+        l_policy_eff_date     = gsn_master_current:policy_eff_date
+        l_policy_exp_date     = gsn_master_current:policy_exp_date
+        l_trans_eff_date      = gsn_master_current:trans_eff_date
+        l_trans_exp_date      = gsn_master_current:trans_exp_date
+        l_policy_suffix       = val(gsn_master_current:policy_suffix)
+      }
+
+    access gsn_master_prior,
+       set gsn_master_prior:policy_no        = l_hold_policy_no,
+           gsn_master_prior:pol_year         = l_hold_pol_year,
+           gsn_master_prior:end_sequence     = l_prior_end_sequence, generic
+
+    while gsn_master_prior:policy_no        = l_hold_policy_no and
+          gsn_master_prior:pol_year         = l_hold_pol_year and
+          gsn_master_prior:end_sequence     = l_prior_end_sequence
+      {
+         access gsn_master_current,
+            set gsn_master_current:policy_no        = gsn_master_prior:policy_no,
+                gsn_master_current:pol_year         = gsn_master_prior:pol_year,
+                gsn_master_current:end_sequence     = l_hold_end_sequence,
+                gsn_master_current:prem_no          = gsn_master_prior:prem_no,
+                gsn_master_current:build_no         = gsn_master_prior:build_no,
+                gsn_master_current:line_of_business = gsn_master_prior:line_of_business,
+                gsn_master_current:lob_subline      = gsn_master_prior:lob_subline,
+                gsn_master_current:line_type        = gsn_master_prior:line_type,
+                gsn_master_current:sub_code         = gsn_master_prior:sub_code, exact
+
+        if gsn_master_current:policy_no        <> gsn_master_prior:policy_no or
+           gsn_master_current:pol_year         <> gsn_master_prior:pol_year or
+           gsn_master_current:end_sequence     <> l_hold_end_sequence or
+           gsn_master_current:prem_no          <> gsn_master_prior:prem_no or
+           gsn_master_current:build_no         <> gsn_master_prior:build_no or
+           gsn_master_current:line_of_business <> gsn_master_prior:line_of_business or
+           gsn_master_current:lob_subline      <> gsn_master_prior:lob_subline or
+           gsn_master_current:line_type        <> gsn_master_prior:line_type or
+           gsn_master_current:sub_code         <> gsn_master_prior:sub_code then
+          {
+        if gsn_master_current:policy_no one of 16482 and
+           gsn_master_current:pol_year one of 2013 and
+           gsn_master_current:lob_subline one of "01" then
+          {
+        write("%c<014>%x%x after l_premium is setl_end_sequence -->%x<--- L_hold_end_sequence --%x<--",01001,"gsn_master_current:policy_no",  gsn_master_current:policy_no, l_end_sequence,l_hold_end_sequence)
+        write("%c%x%x",01001,"gsn_master_current:policy_no",       gsn_master_current:policy_no)
+        write("%c%x%x",02001,"gsn_master_current:pol_year",        gsn_master_current:pol_year)
+        write("%c%x%x",03001,"gsn_master_current:end_sequence",    gsn_master_current:end_sequence)
+        write("%c%x%x",04001,"gsn_master_current:prem_no",         gsn_master_current:prem_no)
+        write("%c%x%x",05001,"gsn_master_current:build_no",        gsn_master_current:build_no)
+        write("%c%x%x",06001,"gsn_master_current:line_of_business",gsn_master_current:line_of_business)
+        write("%c%x%x",07001,"gsn_master_current:lob_subline",     gsn_master_current:lob_subline)
+        write("%c%x%x",08001,"gsn_master_current:premium ",        gsn_master_current:premium)
+        write("%c%x%x",09001,"gsn_master_current:annual  ",        gsn_master_current:annual_premium)
+
+        write("%c%x%x",11001,"gsn_master_prior:policy_no",       gsn_master_prior:policy_no)
+        write("%c%x%x",12001,"gsn_master_prior:pol_year",        gsn_master_prior:pol_year)
+        write("%c%x%x",13001,"gsn_master_prior:end_sequence",    gsn_master_prior:end_sequence)
+        write("%c%x%x",14001,"gsn_master_prior:prem_no",         gsn_master_prior:prem_no)
+        write("%c%x%x",15001,"gsn_master_prior:build_no",        gsn_master_prior:build_no)
+        write("%c%x%x",16001,"gsn_master_prior:line_of_business",gsn_master_prior:line_of_business)
+        write("%c%x%x",17001,"gsn_master_prior:lob_subline",     gsn_master_prior:lob_subline)
+        write("%c%x%x",18001,"gsn_master_prior:premium ",        gsn_master_prior:premium)
+        write("%c%x%x",19001,"gsn_master_prior:annual  ",        gsn_master_prior:annual_premium)
+
+        Read (23,1,"Press Enter to Continue ",L_ENTER,1)
+           }
+
+            l_premium = gsn_master_prior:annual_premium
+
+            if sfpmaster_current:trans_eff <> sfpname_current:eff_date then
+              {
+                I_EFF_DATE = Dateadd(l_trans_exp_date,0,-1)
+                I_SHORT_RATE = SFPMASTER_current:SHORT_RATE
+                I_TOTAL_DAYS = I_EFF_DATE - l_TRANS_EXP_date
+                I_CX_DAYS = I_EFF_DATE - l_TRANS_EFF_date
+                Include "prorata.pro"
+                l_difference = l_premium * I_pro_rata
+                l_premium = l_difference
+              }
+            l_premium = l_premium * -1
+            if gsn_master_prior:mark_as_deleted_location not one of 1 then   --this will eliminate adding the location to every subsquent endorsement
+              {
+                add gsn_master_current
+                  begin
+                    gsn_master_current:POLICY_NO                = gsn_master_prior:policy_no
+                    gsn_master_current:POL_YEAR                 = gsn_master_prior:pol_year
+                    gsn_master_current:END_SEQUENCE             = l_hold_end_sequence
+                    gsn_master_current:PREM_NO                  = gsn_master_prior:prem_no
+                    gsn_master_current:BUILD_NO                 = gsn_master_prior:build_No
+                    gsn_master_current:lob_subline              = gsn_master_prior:lob_subline
+                    gsn_master_current:line_of_business         = gsn_master_prior:line_of_business
+                    gsn_master_current:SUB_CODE                 = gsn_master_prior:sub_code
+                    gsn_master_current:record_rdf               = gsn_master_prior:record_rdf/raw
+                    gsn_master_current:trans_date               = l_trans_date
+                    gsn_master_current:trans_code               = l_current_trans_code
+                    gsn_master_current:policy_eff_date          = l_policy_eff_date
+                    gsn_master_current:trans_eff_date           = l_trans_eff_date
+                    gsn_master_current:trans_exp_date           = l_trans_exp_date
+                    gsn_master_current:save_current_premium     = l_premium
+                    gsn_master_current:premium                  = l_Premium
+                    gsn_master_current:annual_premium           = gsn_master_prior:annual_premium
+                    gsn_master_current:accounting_date          = l_ending_date
+                    gsn_master_current:mark_as_deleted_location = 1
+                    gsn_master_current:coverage_exposure        = l_exposure
+                    gsn_master_current:exposure_base            = "N/A"
+                    gsn_master_current:iso_cf_year_of_construction      = "N/A"
+                    gsn_master_current:iso_bop_year_of_construction     = "N/A"
+                  END
+              }
+          }
+        next gsn_master_prior
+      }
+  } --end of the if
+END
+
+procedure check_for_endorsement
+
+BEGIN
+  local signed ascii number l_previous_total[9];
+  l_save_premium = 0
+  l_diff_total = 0
+
+  access sfpmaster_check_endorsement,
+     set sfpmaster_check_endorsement:policy_no    = l_policy_no,
+         sfpmaster_check_endorsement:pol_year     = l_pol_year,
+         sfpmaster_check_endorsement:end_sequence = l_end_sequence, generic
+
+  if sfpmaster_check_endorsement:trans_code one of 11,12,13,15,16 then
+    {  --check if prior endorsement is there
+      l_previous_end_sequence = l_end_sequence - 1
+      access gsn_master_previous,
+         set gsn_master_previous:policy_no        = l_policy_no,
+             gsn_master_previous:pol_year         = l_pol_year,
+             gsn_master_previous:end_sequence     = l_previous_end_sequence,
+             gsn_master_previous:prem_no          = l_prem_no,
+             gsn_master_previous:build_no         = l_build_no,
+             gsn_master_previous:line_of_business = l_line_of_business,
+             gsn_master_previous:lob_subline      = l_lob_subline,
+             gsn_master_previous:line_type        = l_line_type,
+             gsn_master_previous:sub_code         = l_sub_code, exact
+
+      if gsn_master_previous:policy_no        = l_policy_no and
+         gsn_master_previous:pol_year         = l_pol_year and
+         gsn_master_previous:end_sequence     = l_previous_end_sequence and
+         gsn_master_previous:prem_no          = l_prem_no and
+         gsn_master_previous:build_no         = l_build_no and
+         gsn_master_previous:line_of_business = l_line_of_business and
+         gsn_master_previous:lob_subline      = l_lob_subline and
+         gsn_master_previous:line_type        = l_line_type and
+         gsn_master_previous:sub_code         = l_sub_code then
+        {
+          l_previous_total = 0
+          l_previous_total = gsn_master_previous:annual_premium
+          l_save_premium = l_premium
+          l_diff_total = l_premium - l_previous_total     --take current_premium - previous end_sequence premium to get the current_premium to add to gsn_master.
+          l_annual_premium = l_premium
+          if sfpmaster_check_endorsement:trans_code one of 11 then
+            {
+              if sfpmaster_check_endorsement:trans_eff = sfpname:eff_date then
+                {
+                  l_annual_premium = l_annual_premium * -1
+                  l_premium = l_premium * -1
+                }
+              else
+                {
+                  do pro_rata
+                  l_diff_total = l_annual_premium * I_pro_rata
+                  l_premium = l_diff_total * -1
+                  l_annual_premium = l_annual_premium * -1
+                }
+            }
+          else
+            if sfpmaster_check_endorsement:trans_code one of 16 then
+              {
+                if sfpmaster_check_endorsement:trans_eff = sfpname:eff_date then
+                  {
+                    l_premium = l_premium
+                    l_annual_premium = l_annual_premium
+                  }
+                else
+                  {
+                    do pro_rata
+                    l_diff_total = l_annual_premium * I_pro_rata
+                    l_annual_premium = l_annual_premium
+                    l_premium = l_diff_total
+                  }
+              }
+            else
+              if l_diff_total <> 0 then
+                {
+                  if sfpmaster_check_endorsement:trans_eff <> sfpname:eff_date then
+                    {
+                      do pro_rata
+                      l_diff_total = l_diff_total * I_pro_rata
+                    }
+                  l_premium = l_diff_total
+                }
+        }
+      else   --was not found on prevous endorsement and need to check date to see if pro_rata is needed else just use l_premium
+        {
+          if sfpmaster_check_endorsement:trans_eff <> sfpname:eff_date then
+            {
+              do pro_rata
+              l_premium = l_premium  * I_pro_rata
+            }
+        }
+    }
+
+END
+
+procedure write_difference_in_premium
+
+BEGIN
+  -- L_premium is the total premium of the current subline and endorsement.
+  signed ascii number l_new_premium_to_add[9],
+                      l_save_annual_prior[9],
+                      l_current_premium_to_add[9];
+
+
+  access gsn_master_loop,
+     set gsn_master_loop:policy_no        = l_policy_no,
+         gsn_master_loop:pol_year         = l_pol_year,  generic      --beginning of the current policy and pol_year
+
+  while gsn_master_loop:policy_no    = l_policy_no and
+        gsn_master_loop:pol_year     = l_pol_year
+    {
+      if gsn_master_loop:prem_no     = l_prem_no and
+         gsn_master_loop:build_No    = l_build_no and
+         gsn_master_loop:lob_subline = l_lob_subline then
+        {
+          if l_line_of_business one of 5,50,51 and
+             l_lob_subline one of "60", "70" then
+            {
+              if l_iso_statement_line = gsn_master_loop:annual_statement_lob then
+                {
+                  l_current_premium_to_add = l_current_premium_to_add + gsn_master_loop:premium
+                  l_save_annual_prior = gsn_master_loop:annual_premium
+                }
+            }
+          else
+            if l_line_of_business one of 8 and
+               l_lob_subline one of "81" then
+              {
+                if l_iso_class_code = gsn_master_loop:iso_class_code then
+                  {
+                    l_current_premium_to_add = l_current_premium_to_add + gsn_master_loop:premium    --was just premium
+                    l_save_annual_prior = gsn_master_loop:annual_premium
+                  }
+              }
+            else
+              {
+                l_current_premium_to_add = l_current_premium_to_add + gsn_master_loop:premium    --was just premium
+                l_save_annual_prior = gsn_master_loop:annual_premium
+              }
+        }
+      next gsn_master_loop
+    }  --now I should have the correct total for this endorsement now I need to compare it to the the premium I am adding.
+
+/*
+if sfpmaster:policy_no one of 20084 and
+   sfpmaster:end_sequence one of 2 and
+   l_lob_subline one of "90" then
+  {
+    write("%c<014>%s%x",01041,"l_policy_no     = ",l_POLICY_NO )
+    write("%c%s%x",02041,"l_pol_year           = ",l_POL_YEAR  )
+    write("%c%s%x",03041,"l_end_sequence       = ",l_END_SEQUENCE)
+    write("%c%s%x",04041,"l_prem_no            = ",l_PREM_NO   )
+    write("%c%s%x",05041,"l_build_No           = ",l_BUILD_NO  )
+    write("%c%s%x",06041,"l_premium            = ",l_premium)
+    write("%c%s%x",07041,"l_current_premium    = ",l_current_premium_to_add)
+    write("%c%s%x",08041,"l_save_annual_prior  = ",l_save_annual_prior)
+    write("%c%s%x",09041,"iso_class_code       = ",l_iso_class_code)
+    write("%c%s%x",10041,"l_iso_statement_line = ",l_iso_statement_line)
+    write("%c%s%x",11041,"l_line_of_business   = ",l_line_of_business)
+    write("%c%s%x",12041,"l_LOB_subline        = ",l_LOB_subline)
+    read(20,1,"press enter to continue",l_enter,1)
+  }
+*/
+if sfpmaster:trans_eff <> sfpname:eff_date then --prorat
+  {
+    if l_save_annual_prior = l_annual_premium then
+      {
+        l_premium = 0
+        l_save_premium = 0
+      }
+    else
+      if l_lob_subline one of "50" and     --identity theft
+         l_line_of_business one of 5,50,51 then
+        {
+          if l_save_annual_prior < l_annual_premium then   --mean identity theft went up.  prorata is already calcualated
+            {
+              l_premium = l_premium  --just put it in the file
+            }
+        }
+      else
+        if l_premium >= l_current_premium_to_add then      --  l_current_premium_to_add >= l_premium then
+          {
+
+            l_new_premium_to_add = l_premium - l_current_premium_to_add
+            l_save_premium = l_premium
+            l_premium = l_new_premium_to_add
+          }
+        else
+          {
+            l_premium = l_premium
+            l_save_premium = l_current_premium_to_add + l_premium
+          }
+  }
+else
+  if l_save_annual_prior = l_annual_premium then
+    {
+      l_premium = 0
+      l_save_premium = 0
+    }
+  else
+    if l_premium >= l_current_premium_to_add then
+      {
+        l_new_premium_to_add = l_premium - l_current_premium_to_add
+        l_save_premium = l_premium
+        l_premium = l_new_premium_to_add
+      }
+END
+
+procedure gsn_master_add
+
+BEGIN
+  string l_auto_state[2];
+  l_start_end_sequence[4] = 0
+  l_annual_premium = l_premium
+  if l_end_sequence > 0 then
+    {
+/*      if gsn_master:policy_no = 5718 then
+         l_lob_subline one of "70" then
+        {
+          write("%c<014>%s%x",01041,"in add gsn_master l_policy_no = ", l_POLICY_NO )
+          write("%c%s%x",02041,"l_pol_year = ",    l_POL_YEAR  )
+          write("%c%s%x",03041,"l_end_sequence = ",l_END_SEQUENCE)
+          write("%c%s%x",04041,"l_prem_no  = ",    l_PREM_NO   )
+          write("%c%s%x",05041,"l_build_No = ",    l_BUILD_NO  )
+          write("%c%s%x",06041,"l_premium  = ",    l_premium)
+          read(20,1,"press enter to continue",l_enter,1)
+        }
+*/
+      do check_for_endorsement
+
+      if sfpmaster:trans_code not one of 11,16 then
+        {
+          do write_difference_in_premium
+        }
+    }
+/*
+if l_policy_no one of 973 and l_lob_subline one of "60" then
+  {
+    write("%c<014>%s%x",01041,"in add gsn_master l_policy_no = ", l_POLICY_NO )
+    write("%c%s%x",02041,"l_pol_year = ",   l_POL_YEAR  )
+    write("%c%s%x",03041,"l_end_sequence = ",l_END_SEQUENCE)
+    write("%c%s%x",04041,"l_prem_no  = ",    l_PREM_NO   )
+    write("%c%s%x",05041,"l_build_No = ",    l_BUILD_NO  )
+    write("%c%s%x",06041,"l_premium  = ",    l_premium)
+    read(20,1,"press enter to continue",l_enter,1)
+  }  */
+    add gsn_master
+      begin
+        gsn_master:POLICY_NO                         = l_policy_no
+        gsn_master:POL_YEAR                          = l_pol_year
+        gsn_master:END_SEQUENCE                      = l_end_sequence
+        gsn_master:PREM_NO                           = l_prem_no
+        gsn_master:BUILD_NO                          = l_build_No
+        gsn_master:lob_subline                       = l_lob_subline
+        gsn_master:line_of_business                  = l_Line_of_business
+        gsn_master:line_type                         = l_line_type
+        gsn_master:SUB_CODE                          = l_sub_code
+        gsn_master:SEQUENCE_NUMBER                   = l_END_SEQUENCE
+        gsn_master:CLAIMS_MADE_POLICY_INDICATOR      = "OCCURRENCE"
+        if sfpname:original_eff_date <= 01.25.2016 and
+           sfpname:eff_date >= 01.25.2016 then
+          {
+            access sfpname_alias,
+               set sfpname_alias:policy_no    = sfpname:policy_no,
+                   sfpname_alias:pol_year     = sfpname:pol_year,
+                   sfpname_alias:end_sequence = l_start_end_sequence, exact
+
+            if sfpname_alias:policy_no    = sfpname:policy_no and
+               sfpname_alias:pol_year     = sfpname:pol_year and
+               sfpname_alias:end_sequence = 0 then
+              {
+                if sfpname_alias:trans_code one of 10 then
+                  {
+                    l_policy_suffix = 0
+                  }
+                else
+                  {
+                    l_policy_suffix = year(sfpname:eff_date) - year(sfsdefault:starting_date)
+                  }
+              }
+            else
+              {
+                l_policy_suffix = year(sfpname:eff_date) - year(sfsdefault:starting_date)
+              }
+          }
+        else
+          {
+            l_policy_suffix = 0
+          }
+        gsn_master:policy_suffix                     = str(l_policy_suffix,"999")
+        gsn_master:ACCOUNTING_DATE                   = l_ending_date
+        gsn_master:eff_date                          = sfpname:eff_date
+        gsn_master:POLICY_EFF_DATE                   = sfpname:eff_date
+        gsn_master:POLICY_EXP_DATE                   = sfpname:exp_date
+        gsn_master:trans_exp_date                    = sfpmaster:trans_exp
+        gsn_master:POLICY_INDICATOR                  = L_POLICY_INDICATOR
+        gsn_master:TRANS_EFF_DATE                    = sfpmaster:trans_eff
+        gsn_master:trans_code                        = sfpmaster:trans_code
+        gsn_master:CLAIMS_MADE_POLICY_INDICATOR      = "OCCURRENCE"
+        gsn_master:RETROACTIVE_DATE                  = 00.00.0000
+        gsn_master:DISCOVERY_DATE                    = 00.00.0000
+        gsn_master:payment_plan                      = l_payment_plan
+        L_insured_name = ""
+        I_rev_name = ""
+        access sfscompany,
+           set sfscompany:company_id = l_company_id, exact
+        I_name = sfpname:name[1]
+        include "sfsrevname7.pro"
+        l_insured_name = I_rev_name
+        if trun(sfpname:name[2]) <> "" then
+          {
+            I_name = sfpname:name[2]
+            include "sfsrevname7.pro"
+            l_insured_name = trun(l_insured_name) + " " + I_rev_name
+          }
+        if trun(sfpname:name[3]) <> "" then
+          {
+            I_name = sfpname:name[3]
+            include "sfsrevname7.pro"
+            l_insured_name = trun(l_insured_name) + " " + I_rev_name
+          }
+
+        gsn_master:INSURED_NAME                      = l_insured_name
+        gsn_master:INSURED_ADDRESS                   = trun(sfpname:address[1]) + " " + trun(sfpname:address[2]) + " " + trun(sfpname:address[3])
+        gsn_master:INSURED_CITY                      = sfpname:city
+        gsn_master:INSURED_STATE                     = sfpname:str_state
+        gsn_master:INSURED_ZIP[1,5]                  = sfpname:str_zipCode[1,5]
+        gsn_master:SIC_CODE                          = l_iso_sic_code
+        gsn_master:TYPE_OF_POLICY                    = str(l_type_of_policy)
+        gsn_master:COMPANY_NAME                      = trun(sfscompany:name[1]) + " " + sfscompany:name[2]
+        gsn_master:COMPANY_CODE                      = "GSN"             --need claification from ani
+        gsn_master:FAC_INDICATOR                     = L_FAC_INDICATOR
+        if l_line_of_business one of 15,16 then   --auto
+          {
+            gsn_master:SITE_ADDRESS                  = "Unknown"
+            switch (capvehicle:state)
+              case 29 : l_auto_state = "NJ"
+              case 7  : l_auto_state = "DE"
+              case 37 : l_auto_state = "PA"
+            end
+
+            gsn_master:SITE_STATE                    = l_auto_state
+            gsn_master:SITE_CITY                     = capVEHICLE:TERRITORY_DESCRIPTION
+            gsn_master:SITE_ZIP                      = capvehicle:str_zipCode[1,5]
+          }
+        gsn_master:SITE_COUNTY                       = L_COUNTY_STR
+        if l_line_of_business one of 15,16 then
+          {
+             --gsn_master:TERRITORY_CODE_ISO = ""  -- not neede because of state nj,de,pa adopted the zipcode terrioty rating
+            gsn_master:TERRITORY_CODE_ISO = str(capvehicle:territory)
+          }
+
+        gsn_master:CONSTRUCTION_CLASS                = l_construction_class
+        switch (l_protection)
+          case "5" : l_protection1 = "10"   --correct
+          case "4" : l_protection1 = "5"
+          case "3" : l_protection1 = "5"
+          case "2" : l_protection1 = "5"
+          case "1" : l_protection1 = "5"
+        end
+        gsn_master:PROTECTION_CLASS_ISO              = l_protection1
+        gsn_master:CLASS_CODE                        = l_class_code
+        gsn_master:iso_class_code                    = l_iso_class_code
+        gsn_master:wind_DEDUCTIBLE                   = val(l_wind_deductible)
+        gsn_master:BCEG                              = ""  --something in iso ask ani
+        gsn_master:PREMIUM                           = l_premium
+        if sfpmaster:trans_code one of 10,14 then
+          {
+            gsn_master:save_current_premium          = l_premium
+          }
+        else
+          {
+            gsn_master:save_current_premium          = l_save_premium
+          }
+        access sfsline2,
+           set sfsline2:Company_id       = l_company_id,
+               sfsline2:line_of_business = l_line_of_business,
+               sfsline2:lob_subline      = l_lob_subline , exact
+
+        if gsn_master:line_of_business one of 5,50,51 and
+           gsn_master:lob_subline one of "60","70" then
+          {
+            gsn_master:ANNUAL_STATEMENT_LOB          = l_iso_statement_line
+          }
+        else
+          {
+            gsn_master:ANNUAL_STATEMENT_LOB          = sfsline2:ISO_STMT_LOB
+          }
+        gsn_master:DEDUCTIBLE                        = val(l_deductible)
+        if l_line_of_business one of 11 then
+          {
+            gsn_master:property_deductible           = "0"
+          }
+        else
+          {
+            gsn_master:property_deductible           = l_deductible
+          }
+        gsn_master:LIABILITY_DEdUCTIBLE              = l_liability_deductible
+        if l_line_of_business = 15 then
+          begin           --auto
+            l_limit[1] = 0
+            l_limit[2] = 0
+            l_limit[3] = 0
+            l_limit[4] = 0
+            l_limit[7] = 0
+            l_limit[8] = 0
+            l_limit[9] = 0
+            l_limit[10] = 0
+            l_limit[11] = 0
+            l_limit[12] = 0
+            l_limit[13] = 0
+            l_limit[15] = 0
+            l_limit[16] = 0
+            l_limit[17] = 0
+            l_limit[18] = 0
+            l_limit[19] = 0
+            l_limit[20] = 0
+            l_limit[21] = 0
+            l_limit[22] = 0
+            l_limit[23] = 0
+            l_limit[24] = 0
+            l_limit[25] = 0
+            l_limit[26] = 0
+            l_limit[27] = 0
+            l_limit[30] = 0
+          end
+        gsn_master:LIMIT[1]                          = l_limit[1]
+        gsn_master:LIMIT[2]                          = l_limit[2]
+        gsn_master:LIMIT[3]                          = l_limit[3]
+        gsn_master:LIMIT[4]                          = l_limit[4]
+        gsn_master:LIMIT[5]                          = l_limit[5]
+        gsn_master:LIMIT[6]                          = l_limit[6]
+        gsn_master:LIMIT[7]                          = l_limit[7]
+        gsn_master:LIMIT[8]                          = l_limit[8]
+        gsn_master:LIMIT[9]                          = l_limit[9]
+        gsn_master:LIMIT[10]                         = l_limit[10]
+        gsn_master:LIMIT[11]                         = l_limit[11]
+        gsn_master:LIMIT[12]                         = l_limit[12]
+        gsn_master:LIMIT[13]                         = l_limit[13]
+        gsn_master:LIMIT[14]                         = l_limit[14]
+        gsn_master:LIMIT[15]                         = l_limit[15]
+        gsn_master:LIMIT[16]                         = l_limit[16]
+        gsn_master:LIMIT[17]                         = l_limit[17]
+        gsn_master:LIMIT[18]                         = l_limit[18]
+        gsn_master:LIMIT[19]                         = l_limit[19]
+        gsn_master:LIMIT[20]                         = l_limit[20]
+        gsn_master:LIMIT[21]                         = l_limit[21]
+        gsn_master:LIMIT[22]                         = l_limit[22]
+        gsn_master:LIMIT[23]                         = l_limit[23]
+        gsn_master:LIMIT[24]                         = l_limit[24]
+        gsn_master:LIMIT[25]                         = l_limit[25]
+        gsn_master:LIMIT[26]                         = l_limit[26]
+        gsn_master:LIMIT[27]                         = l_limit[27]
+        gsn_master:LIMIT[28]                         = l_limit[28]
+        gsn_master:LIMIT[29]                         = l_limit[29]
+        gsn_master:LIMIT[30]                         = l_limit[30]
+        gsn_master:CO_INSURANCE_FACTOR               = l_coinsurance_factor
+        gsn_master:SUBLINE_CODE                      = l_lob_subline
+        gsn_master:ISOCOVERAGECODE                   = l_coverage_code
+        gsn_master:TERRORISM_COVERAGE_CODE           = "A"
+        gsn_master:STATEEXCEPTIONCODE                = l_state_exception_code
+        gsn_master:RATINGIDCODE                      = l_rating_id_code
+        gsn_master:ORDINANCELAWID                    = "5"   --need to change this based on gsn
+        gsn_master:RATEGROUP                         = ""
+        gsn_master:CLASS_LIMIT                       = ""
+        gsn_master:LCE_EFF_DATE                      = 00.00.0000
+        gsn_master:TYPEOFEQUIPMENTCODE               = ""
+        gsn_master:EMPLOYEES                         = ""
+        gsn_master:RATABLEEMPLOYEES                  = ""
+        gsn_master:PREMISES                          = ""
+        gsn_master:FORM_CODE                         = l_form
+        gsn_master:LIMIT_ID                          = "01"    --not applicable always single limit use 01
+        gsn_master:TOTAL_RATING_MOD_FACTOR           = str(l_total_rate_modification_factor)
+        gsn_master:DEDUCTIBLE_BASIS                  = "DOLLARS"
+        gsn_master:CO_INSURANCE_MODIFIER             = ""
+        gsn_master:INFLATION_GUARD_FACTOR            = ""
+        gsn_master:INCREASED_LIMITS_FACTOR           = ""
+        gsn_master:DEDUCTIBLE_FACtor                 = ""
+        gsn_master:SCHEDULE_RATING_FACTOR            = ""
+        gsn_master:EXPERIENCE_RATING_MOD_FACTOR      = ""
+        gsn_master:RATE_DEPARTURE_LCM                = "999"
+        gsn_master:IND_RISK_PREMIUM_MOD_FACTOR_IRPM  = ""
+        gsn_master:EXPENSE_MOD_PREMIUM_DIS_FACTOR    = ""
+        gsn_master:PACKAGE_MOD_FACTOR                = ""
+        gsn_master:AGREED_AMOUNT_MODIFIER            = ""
+        gsn_master:TERRITORY_MODIFIER                = ""
+        gsn_master:PRIOR_ACTS_FACTOR                 = ""
+        gsn_master:UNITS_DISCOUNT_FACTOR             = ""
+        gsn_master:DEFENSE_IN_OR_OUT_OF_LIMIT_DOL    = ""
+        gsn_master:FIRST_DOLLAR_MODIFIER             = ""
+        gsn_master:COVERAGE_EXPOSURE                 = l_exposure
+        gsn_master:line_of_business                  = l_line_of_business
+        gsn_master:AGENCY_COMMISSION                 = 25
+        gsn_master:attachment_point                  = 0
+        gsn_master:iso_subline_code                  = str(sfsline2:ISO_SUBLINE)
+        gsn_master:trans_date                        = sfpmaster:PREMIUM_TRANS_DATE
+        do check_prior_policy_no
+        gsn_master:prior_policy_number               = l_prior_policy_number          --check_prior_policy_no()
+        gsn_master:prior_policy_number_eff_date      = l_prior_policy_eff_date     --get_previous_pol_eff_date()
+        gsn_master:prior_policy_number_prefix        = l_prior_policy_number_prefix
+        gsn_master:res_condo                         = l_res_condo
+        gsn_master:annual_premium                    = l_annual_premium
+        gsn_master:vehicle_age                       = l_age_code
+        gsn_master:value_per_rating_unit             = "B"
+        gsn_master:zone_rating_code                  = "000"
+        gsn_master:original_cost_new                 = str(capvehicle:ORIGINAL_COST)
+        gsn_master:iso_pip_deductible_code           = l_pip_deductible_code
+        gsn_master:iso_pip_rating_basis              = l_pip_rating_basis_code
+        gsn_master:iso_pip_limit_code                = l_pip_limit_code
+        gsn_master:ISO_ANTI_THEFT_DEVICE_CODE        = l_anti_theft_code
+        gsn_master:ISO_Garage_Agg_Lmt_Ind_Code       = "N/A"
+        gsn_master:number_of_atm                     = ""
+        gsn_master:ISO_eCommerce_Hazard_Grp_Ind      = ""
+        gsn_master:iso_type_deductible_code          = "01"
+        gsn_master:ISO_Policy_Limits_Code            = l_iso_policy_limits_code
+        gsn_master:exposure_base                     = "N/A"
+        gsn_master:iso_cf_year_of_construction       = "N/A"
+        gsn_master:iso_bop_year_of_construction      = "N/A"
+     }
+END
+
+procedure check_prior_policy_no
+
+BEGIN
+  local file sfpname_prior_term = alias for sfpname;
+  local file sfpname_current_term = alias for sfpname;
+  local file sfpname_previous_policy_term = alias for sfpname;
+
+  unsigned ascii number l_prior_year[4],
+                        l_prior_end_sequence[4] = 0,
+                        l_current_end_sequence[4] = 0;
+
+  l_prior_policy_number_prefix = ""
+
+  l_prior_year = sfpname:pol_year - 1
+
+  access sfpname_current_term,
+     set sfpname_current_term:policy_no     = sfpname:policy_no ,
+         sfpname_current_term:pol_year      = sfpname:pol_year,
+         sfpname_current_term:end_sequence  = l_current_end_sequence, exact    --always look at endorsement 0 see if it is a 10 for later.
+
+  access sfpname_prior_term,
+     set sfpname_prior_term:policy_no     = sfpname:policy_no ,
+         sfpname_prior_term:pol_year      = l_prior_year,
+         sfpname_prior_term:end_sequence  = l_prior_end_sequence, exact
+
+  access sfpname_previous_policy_term,
+     set sfpname_previous_policy_term:policy_no     = sfpname:previous_policy_no ,
+         sfpname_previous_policy_term:pol_year      = l_prior_year,
+         sfpname_previous_policy_term:end_sequence  = l_prior_end_sequence, exact
+
+  if sfpname_current_term:trans_code one of 10 then
+    {
+      l_prior_policy_number   = 0
+      l_prior_policy_eff_date = 01.01.1900
+    }
+  else
+    if sfpname_prior_term:policy_no     = sfpname:policy_no and
+       sfpname_prior_term:pol_year      = l_prior_year and
+       sfpname_prior_term:end_sequence  = l_prior_end_sequence then  --means found a prior term of the policy so assign the policy number
+      {
+        l_prior_policy_number        = sfpname:policy_no
+        l_prior_policy_eff_date      = sfpname_prior_term:eff_date
+        l_prior_policy_number_prefix = sfsline:alpha
+      }
+    else  --lets try looking it up by the prior policy number
+      if sfpname_previous_policy_term:policy_no     = sfpname:previous_policy_no and
+         sfpname_previous_policy_term:pol_year      = l_prior_year and
+         sfpname_previous_policy_term:end_sequence  = l_prior_end_sequence then  --found the previous policy number as a policy in the system.
+        {
+          access sfsline_alias,
+             set sfsline_alias:Company_id       = sfpname_previous_policy_term:company_id,
+                 sfsline_alias:line_of_business = sfpname_previous_policy_term:line_of_business,
+                 sfsline_alias:lob_subline      = "00" , exact
+
+          l_prior_policy_number        = sfpname:previous_policy_no
+          l_prior_policy_eff_date      = sfpname_previous_policy_term:eff_date
+          l_prior_policy_number_prefix = sfsline_alias:alpha
+        }
+      else
+        {
+          l_prior_policy_number   = 0   --default it to current policy
+          l_prior_policy_eff_date = 01.01.1900
+        }
+--  return l_prior_policy_number
+END
+
+/*
+wdate function get_previous_pol_eff_date()
+
+BEGIN
+  local file sfpname_previous_policy = alias for sfpname;
+  local file sfpname_current_term = alias for sfpname;
+--  wdate l_prior_policy_eff_date;
+  unsigned ascii number l_prior_year[4];
+  unsigned ascii number l_prior_end_sequence[4] = 0;
+  unsigned ascii number l_current_term_end_sequence[4] = 0;
+
+  access sfpcurrent,
+     set sfpcurrent:policy_no    = sfpname:previous_policy_no, exact
+
+  if sfpname:previous_policy_no <> 0 then
+    {
+      l_prior_year         = sfpcurrent:pol_year - 1
+
+      access sfpname_previous_policy,
+         set sfpname_previous_policy:policy_no     = sfppoint:policy_no ,
+             sfpname_previous_policy:pol_year      = l_prior_year,
+             sfpname_previous_policy:end_sequence  = l_prior_end_sequence, exact
+
+      if sfpname_previous_policy:policy_no     = sfppoint:policy_no and
+         sfpname_previous_policy:pol_year      = l_prior_year  and
+         sfpname_previous_policy:end_sequence  = l_prior_end_sequence then
+        {
+          l_prior_policy_eff_date = sfpname_previous_policy:eff_date
+        }
+      else
+        {
+          l_prior_policy_eff_date = 01.01.1900
+        }
+    }
+  else
+    if sfpname:previous_policy_no = 0 then
+      {
+        access sfpname_current_term,
+           set sfpname_current_term:policy_no     = sfpname:policy_no ,
+               sfpname_current_term:pol_year      = sfpname:pol_year,
+               sfpname_current_term:end_sequence  = l_current_term_end_sequence, exact
+
+        if sfpname_current_term:policy_no    = sfpname:policy_no and
+           sfpname_current_term:pol_year     = sfpname:pol_year and
+           sfpname_current_term:end_sequence = l_current_term_end_sequence then
+          {
+            if sfpname_current_term:trans_code one of 10 then
+              {
+                l_prior_policy_eff_date = 01.01.1900
+              }
+            else
+              {
+                l_prior_policy_eff_date = sfpname_current_term:eff_date
+              }
+          }
+      }
+  if l_prior_policy_eff_date <= 01.25.2016 then  --gang started with gsn 09/01/2011 so I have to go one year after that to find prior valid policies
+    {
+      l_prior_policy_eff_date = 01.01.1900
+    }
+  return l_prior_policy_eff_date
+END
+*/
+
+End

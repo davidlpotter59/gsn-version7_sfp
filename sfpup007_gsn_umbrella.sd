@@ -1,0 +1,1641 @@
+%%                                        
+/*
+Date Written: 09/12/2011
+
+Name: sfpup007_umbrella.sd
+
+Copyright (c) 2011, SCIPS.com Inc.
+
+Modify
+Date                   By                  Comment
+--------------------------------------------------------------
+09/12/2011            REL                 This program is for the interface with gsn for only umbrella for G & G.
+==============================================================
+*/
+
+Program
+  Name = "sfpup007_gsn_umbrella";
+  Type = "File";
+  Domain = "dummy";
+  Padcharacter = Space;
+  array [30] of unsigned ascii number l_limit[9];
+  array [4] of signed ascii number l_misc_premium[9];
+  unsigned ascii number l_counter[6],
+                        l_claim_count[4],
+                        l_bpsclass_sub_code[4];
+
+  wdate l_eff_date,
+        I_EFF_DATE,
+        l_starting_date,
+        l_prior_policy_eff_date,
+        l_ending_date;
+
+  wdate function get_previous_pol_eff_date();
+  number function calculate_number_of_vehicle(number,number,number);
+
+  unSigned ascii number  l_claims_count[4],
+                         l_class_code[5],
+                         l_prior_policy_number[9],
+                         l_cppbusiness_only_once[1],
+                         L_liability_is_policy_wide[1],
+                         l_sfpend_forms_only_once[1],
+                         l_calculate_money_once[1],
+                         l_identity_theft[1],
+                         l_total_rate_modification_factor[3]=1,
+                         l_type_of_policy[2],
+                         l_hold_pol_year[4],
+                         l_hold_end_sequence[4],
+                         l_hold_policy_no[9],
+                         l_hold_prem_no[4],
+                         l_hold_build_no[4],
+                         l_hold_line_of_business[4],
+                         l_policy_no[9],                 --used because of scope rules in cyberscience.
+                         l_res_condo[1],
+                         l_sfpend_premium[9],
+                         l_pol_year[4],
+                         l_end_sequence[4],
+                         L_identity_theft_only_once[1],
+                         l_fix_prsmaster_end_sequence[4],
+                         l_prem_no[4],
+                         l_build_no[4],
+                         l_hired_only_once[1],
+                         l_hiredcomp_only_once[1],
+                         l_nonowned_only_once[1],
+                         l_nonmedpay_only_once[1],
+                         l_BRpip_only_once[1],
+                         l_doc_only_once[1],
+                         l_docliab_only_once[1] ,
+                         l_nonliab_only_once[1],
+                         l_package_only_once[1],
+                         l_line_of_business[4],
+                         l_state[2],
+                         l_loop[2],
+                         l_liability_code[2],
+                         l_total_premium[9],
+                         l_broadened_pip[9],
+                         l_process_umbrella_once[1],
+                         l_year_built[4],
+                         l_sub_code[4],
+                         l_do_only_once[1],
+                         l_misc[1] ,  --this is for misc premium
+                         l_do_terrorism_only_once[1],
+                         l_terrorism_only_once[1],
+                         l_payment_plan[4];
+                         
+    local unsigned ascii number l_num_vehicle[4];
+
+  signed ascii number l_premium[9],
+                      l_save_premium[9],
+                      l_diff_total[9],
+                      l_annual_premium[9],
+                      l_current_total_premium[9],
+                      l_short_rate[4]=0/dec=2;
+
+  STRING L_POLICY_INDICATOR[20],
+         l_iso_prop_class_code[5],
+         l_pip_rating_basis_code[3],
+         l_coverage_code[3],
+         l_iso_liab_class_code[5],
+         l_line_type[1]= " ",
+         l_anti_theft_code[4],
+         l_iso_crime_class_code[5],
+         l_state_exception_code[6]="" ,
+         l_insured_name[152];
+
+  local file sfsline_by_subline = alias for sfsline;
+  local file gsn_master_just_added = alias for gsn_master;
+
+
+  unsigned ascii number l_policy_suffix[3];
+
+  string l_fac_indicator[1],
+         l_building_deductible[6],
+         l_iso_statement_line[3],
+         l_prior_policy_number_prefix[5],
+         l_pip_limit_code[2],
+         l_bceg[6],
+         l_lob_subline[2],
+         l_hold_lob_subline[2],
+         l_iso_policy_limit_code[2],
+         l_rating_id_code[5]= "N/A",
+         l_wind_deductible[6],
+         l_company_id[10] = "",
+         l_county_str[40],
+         l_construction_class[6],
+         l_protection[6],
+         l_protection1[6],
+         l_coinsurance_factor[4],
+         l_deductible[6],
+         l_age_code[4],
+         l_pip_deductible_code[3],
+         l_limit_id[6],
+         l_exposure[6]= "0",
+         l_liability_deductible[6],
+         l_occupancy_type[2],
+         l_site_description[100],
+         l_form[4],
+         l_enter[1],
+         l_iso_class_code[6],
+         l_base_class_code[6],         --used if the cinland and for item that do not have class code need to use the base.
+         l_iso_sic_code[6],
+         l_no_units[3];
+
+  signed ascii number l_percent_of_prsmaster[6]/dec=4,
+                      l_prsmaster_total[9]/dec=2;
+
+  local file sfpmaster_check_endorsement = alias for sfpmaster;
+
+  include "prorata.var"
+  include "sfsrevname.var"
+
+initialization
+  l_STARTING_DATE = Date(COMMANDLINE[1,8])
+  l_ENDING_DATE   = Date(COMMANDLINE[9,16])
+  l_hold_policy_no = 0
+  l_hold_pol_year = 0
+  l_hold_end_sequence = 0
+  write("<014>")
+  access sfplocation,
+     set sfplocation:policy_no  = "", approximate    --sets the file to beginning of the file.
+
+  access sfpname,
+     set sfpname:policy_no    = sfplocation:policy_no,
+         sfpname:pol_year     = sfplocation:pol_year,
+         sfpname:end_sequence = sfplocation:end_sequence, generic
+
+  access sfsline,
+     set sfsline:Company_id       = sfpname:company_id,
+         sfsline:line_of_business = sfpname:line_of_business,
+         sfsline:lob_subline      = "00" , exact
+
+  access sfppoint,
+     set sfppoint:policy_no       = sfpname:policy_no,
+         sfppoint:pol_year        = sfpname:pol_year, exact
+
+  access gsn_master,
+     set gsn_master:policy_no        = sfplocation:policy_no,
+         gsn_master:pol_year         = sfplocation:pol_year,
+         gsn_master:end_sequence     = sfplocation:end_sequence,
+         gsn_master:prem_no          = sfplocation:prem_no,
+         gsn_master:build_no         = sfplocation:build_no,
+         gsn_master:line_of_business = l_line_of_business, generic
+
+  do process_scips_premium_file
+
+  access sfplocation,
+     set sfplocation:policy_no  = "", approximate    --sets the file to beginning of the file.
+
+  while sfplocation:errornumber = 0
+    {
+      access sfpmaster,
+         set sfpmaster:policy_no    = sfplocation:policy_no,
+             sfpmaster:pol_year     = sfplocation:pol_year,
+             sfpmaster:end_sequence = sfplocation:end_sequence, generic
+
+      access sfpname,
+         set sfpname:policy_no    = sfplocation:policy_no,
+             sfpname:pol_year     = sfplocation:pol_year,
+             sfpname:end_sequence = sfplocation:end_sequence, generic
+
+      access sfsline,
+         set sfsline:Company_id       = sfpname:company_id,
+             sfsline:line_of_business = sfpname:line_of_business,
+             sfsline:lob_subline      = "00" , exact
+
+      if sfsline:lob_code one of "UMBRELLA" then
+        {
+          access sfppoint,
+             set sfppoint:policy_no       = sfpname:policy_no,
+                 sfppoint:pol_year        = sfpname:pol_year, exact
+
+          l_line_of_business = sfpname:line_of_business
+          l_company_id       = sfpname:company_id
+          access sfscompany,
+             set sfscompany:company_id = sfpname:company_id , exact
+
+          If ((sfpmaster:premium_trans_date < l_starting_date and
+               sfpmaster:trans_eff => l_starting_date and
+               sfpmaster:trans_eff <= l_ending_date) or
+
+              (sfpmaster:premium_trans_date => l_starting_date and
+               sfpmaster:premium_trans_date <= l_ending_date and
+               sfpmaster:trans_eff <= l_ending_date)) and
+
+               sfpmaster:trans_eff   <> sfpmaster:trans_exp and
+               sfpmaster:policy_no    = sfplocation:policy_no and
+               sfpmaster:pol_year     = sfplocation:pol_year and
+               sfpmaster:end_sequence = sfplocation:end_sequence and
+               sfpmaster:trans_code < 17 and
+               sfpname:eff_date >= 11.20.2018 then
+            {
+              l_policy_no    = sfplocation:policy_no
+              l_pol_year     = sfplocation:pol_year
+              l_end_sequence = sfplocation:end_sequence
+              l_build_no     = sfplocation:build_no
+              l_prem_no      = sfplocation:prem_no
+              l_payment_plan = sfpname:payment_plan 
+
+               if (sfppoint:converted one of "Y" or
+                  (sfppoint:converted one of "N" and
+                   sfpmaster:end_sequence < sfppoint:end_sequence)) then           --check to make sure the transaction was updated if not do not have it included.
+                {
+                  l_company_id       = sfpname:company_id
+                  l_line_of_business = sfpname:line_of_business
+                  if l_hold_policy_no   <> l_policy_no or
+                     l_hold_pol_year     <> l_pol_Year or
+                     l_hold_end_sequence <> l_end_sequence then
+                    {
+                      for l_loop = 1 to 30
+                        {
+                          l_limit[l_loop]   = 0
+                        }
+                    }
+
+                  if l_build_no     <> sfplocation:build_no or   --this keep subcode same for each end_sequence.. I use this in bop because of the two sublines. 60 40 split
+                     l_prem_no      <> sfplocation:prem_no or
+                     l_end_sequence <> sfplocation:end_sequence then
+                    {
+                      l_sub_code = 0
+                    }
+
+                  access gsn_master,
+                     set gsn_master:policy_no        = sfplocation:policy_no,
+                         gsn_master:pol_year         = sfplocation:pol_year,
+                         gsn_master:end_sequence     = sfplocation:end_sequence,
+                         gsn_master:prem_no          = sfplocation:prem_no ,
+                         gsn_master:build_no         = sfplocation:prem_no ,
+                         gsn_master:line_of_business = l_line_of_business, generic
+
+/*                  write("<014>")
+                  write("%c%n",1005,sfplocation:policy_no)
+                  write("%c%n",1015,sfplocation:pol_year)
+                  write("%c%n",1025,sfplocation:end_sequence)
+                  write("%c%n",1035,gsn_master:prem_no)
+                  write("%c%n",1045,gsn_master:build_no)
+                  write("%c%n",1045,gsn_master:line_of_business)*/
+
+
+                  if gsn_master:policy_no        <> sfplocation:policy_no or
+                     gsn_master:pol_year         <> sfplocation:pol_year or
+                     gsn_master:end_sequence     <> sfplocation:end_sequence or
+                     gsn_master:prem_no          <> sfplocation:prem_no or
+                     gsn_master:build_no         <> sfplocation:prem_no or
+                     gsn_master:line_of_business <> l_line_of_business then
+                    {
+                      access sfscompany,
+                         set sfscompany:company_id = l_company_id , exact
+--                       Read (23,1,"Press Enter to Continue ",L_ENTER,1)
+
+                      switch (sfsline:lob_code)
+                        case "UMBRELLA"   :  begin
+                                               do add_to_gsn_master
+                                             end
+                      end
+                    }
+
+                }
+            }
+        }  --if sfsline:lob_code one of umbrella
+      next sfplocation
+    }
+
+do process_gsn_master_premium_by_subline
+do check_difference_between_files
+
+update
+
+procedure definition
+
+procedure check_difference_between_files
+
+BEGIN
+  access gsn_master_premium,
+     set gsn_master_premium:company_id = "", approximate
+
+  while gsn_master_premium:errornumber = 0
+    {
+      if ((gsn_master_premium:trans_date < l_starting_date and
+           gsn_master_premium:trans_eff => l_starting_date and
+           gsn_master_premium:trans_eff <= l_ending_date) or
+          (gsn_master_premium:trans_date => l_starting_date and
+           gsn_master_premium:trans_date <= l_ending_date and
+           gsn_master_premium:trans_eff <= l_ending_date)) and
+           gsn_master_premium:line_of_business one of 7 then
+        {
+          access gsn_master_compare,
+             set gsn_master_compare:company_id       = l_company_id,
+                 gsn_master_compare:policy_no        = gsn_master_premium:policy_no,
+                 gsn_master_compare:pol_year         = gsn_master_premium:pol_year,
+                 gsn_master_compare:end_sequence     = gsn_master_premium:end_sequence,
+                 gsn_master_compare:line_of_business = gsn_master_premium:line_of_business,
+                 gsn_master_compare:lob_subline      = gsn_master_premium:lob_subline,
+                 gsn_master_compare:trans_date       = gsn_master_premium:trans_date,
+                 gsn_master_compare:trans_code       = gsn_master_premium:trans_code, exact
+
+          if gsn_master_compare:company_id       = l_company_id and
+             gsn_master_compare:policy_no        = gsn_master_premium:policy_no and
+             gsn_master_compare:pol_year         = gsn_master_premium:pol_year and
+             gsn_master_compare:end_sequence     = gsn_master_premium:end_sequence and
+             gsn_master_compare:line_of_business = gsn_master_premium:line_of_business and
+             gsn_master_compare:lob_subline      = gsn_master_premium:lob_subline and
+             gsn_master_compare:trans_date       = gsn_master_premium:trans_date and
+             gsn_master_compare:trans_code       = gsn_master_premium:trans_code then
+            {
+               if gsn_master_compare:premium <> gsn_master_premium:premium then
+                 {
+                   access gsn_master,
+                      set gsn_master:policy_no        = gsn_master_compare:policy_no,
+                          gsn_master:pol_year         = gsn_master_compare:pol_year,
+                          gsn_master:end_sequence     = gsn_master_compare:end_sequence,
+                          gsn_master:prem_no          = gsn_master_compare:prem_no,
+                          gsn_master:build_no         = gsn_master_compare:build_no,
+                          gsn_master:line_of_business = gsn_master_compare:line_of_business,
+                          gsn_master:lob_subline      = gsn_master_compare:lob_subline,
+                          gsn_master:line_type        = gsn_master_compare:line_type,
+                          gsn_master:sub_code         = gsn_master_compare:sub_code, exact
+
+                   if gsn_master:policy_no        = gsn_master_compare:policy_no and
+                      gsn_master:pol_year         = gsn_master_compare:pol_year and
+                      gsn_master:end_sequence     = gsn_master_compare:end_sequence and
+                      gsn_master:prem_no          = gsn_master_compare:prem_no and
+                      gsn_master:build_no         = gsn_master_compare:build_no and
+                      gsn_master:line_of_business = gsn_master_compare:line_of_business and
+                      gsn_master:lob_subline      = gsn_master_compare:lob_subline and
+                      gsn_master:line_type        = gsn_master_compare:line_type and
+                      gsn_master:sub_code         = gsn_master_compare:sub_code and
+                      gsn_master:line_of_business one of 7 then
+                     {
+                       if gsn_master:mark_as_deleted_location one of 1 then
+                         {
+                           l_diff_total = gsn_master:premium + (gsn_master_premium:premium - gsn_master_compare:premium)
+
+                         }
+                       else
+                         {
+                           l_diff_total = gsn_master_premium:premium - gsn_master_compare:premium
+                         }
+                       change gsn_master
+                         begin
+                           if gsn_master:mark_as_deleted_location one of 1 then
+                             {
+                               gsn_master:premium = l_diff_total
+                             }
+                           else
+                             {
+                               gsn_master:premium = gsn_master:premium + l_diff_total --gsn_master_compare:premium + l_diff_total
+                             }
+                         end
+                     }  --if validation of the access make sure it has a good read on the file before you change.
+                 }  --if gsn_master_compare:premium <> gsn_master_premium:premium
+            } -- if statement
+        }
+      next gsn_master_premium
+    }
+END
+
+procedure process_gsn_master_premium_by_subline
+
+--this procedure will get the gsn master file in the same format as the gsn_master_premium file that was created.
+--I will then be able to see which subline have issues.
+
+BEGIN
+  l_company_id = "GGUND"
+
+  access gsn_master_just_added,
+     set gsn_master_just_added:policy_no        = "", generic
+
+  while gsn_master_just_added:errornumber = 0
+    {
+      if ((gsn_master_just_added:trans_date     < l_starting_date and
+           gsn_master_just_added:trans_eff_date => l_starting_date and
+           gsn_master_just_added:trans_eff_date <= l_ending_date) or
+
+          (gsn_master_just_added:trans_date     => l_starting_date and
+           gsn_master_just_added:trans_date     <= l_ending_date and
+           gsn_master_just_added:trans_eff_date <= l_ending_date)) and
+
+           gsn_master_just_added:trans_code < 17 and
+           gsn_master_just_added:premium <> 0 and
+           gsn_master_premium:line_of_business one of 7 then
+        {
+          access gsn_master_compare,
+             set gsn_master_compare:company_id       = l_company_id,
+                 gsn_master_compare:policy_no        = gsn_master_just_added:policy_no,
+                 gsn_master_compare:pol_year         = gsn_master_just_added:pol_year,
+                 gsn_master_compare:end_sequence     = gsn_master_just_added:end_sequence,
+                 gsn_master_compare:line_of_business = gsn_master_just_added:line_of_business,
+                 gsn_master_compare:lob_subline      = gsn_master_just_added:lob_subline,
+                 gsn_master_compare:trans_date       = gsn_master_just_added:trans_date,
+                 gsn_master_compare:trans_code       = gsn_master_just_added:trans_code, exact
+
+          if gsn_master_compare:company_id       <> l_company_id or
+             gsn_master_compare:policy_no        <> gsn_master_just_added:policy_no or
+             gsn_master_compare:pol_year         <> gsn_master_just_added:pol_year or
+             gsn_master_compare:end_sequence     <> gsn_master_just_added:end_sequence or
+             gsn_master_compare:line_of_business <> gsn_master_just_added:line_of_business or
+             gsn_master_compare:lob_subline      <> gsn_master_just_added:lob_subline or
+             gsn_master_compare:trans_date       <> gsn_master_just_added:trans_date or
+             gsn_master_compare:trans_code       <> gsn_master_just_added:trans_code then
+            {
+              add gsn_master_compare
+                begin
+                  gsn_master_compare:company_id       = l_company_id
+                  gsn_master_compare:policy_no        = gsn_master_just_added:policy_no
+                  gsn_master_compare:pol_year         = gsn_master_just_added:pol_year
+                  gsn_master_compare:end_sequence     = gsn_master_just_added:end_sequence
+                  gsn_master_compare:line_of_business = gsn_master_just_added:line_of_business
+                  gsn_master_compare:lob_subline      = gsn_master_just_added:lob_subline
+                  gsn_master_compare:trans_date       = gsn_master_just_added:trans_date
+                  gsn_master_compare:trans_code       = gsn_master_just_added:trans_code
+                  gsn_master_compare:TRANS_EFF        = gsn_master_just_added:TRANS_EFF_DATE
+                  gsn_master_compare:EFF_DATE         = gsn_master_just_added:POLICY_EFF_DATE
+                  gsn_master_compare:prem_no          = gsn_master_just_added:prem_no
+                  gsn_master_compare:build_no         = gsn_master_just_added:BUILD_NO
+                  gsn_master_compare:sub_code         = gsn_master_just_added:sub_code
+                  gsn_master_compare:premium          = gsn_master_just_added:premium
+               end
+            }
+          else
+            if gsn_master_compare:company_id       = l_company_id and
+               gsn_master_compare:policy_no        = gsn_master_just_added:policy_no and
+               gsn_master_compare:pol_year         = gsn_master_just_added:pol_year and
+               gsn_master_compare:end_sequence     = gsn_master_just_added:end_sequence and
+               gsn_master_compare:line_of_business = gsn_master_just_added:line_of_business and
+               gsn_master_compare:lob_subline      = gsn_master_just_added:lob_subline and
+               gsn_master_compare:trans_date       = gsn_master_just_added:trans_date and
+               gsn_master_compare:trans_code       = gsn_master_just_added:trans_code and
+               gsn_master_compare:trans_eff        = gsn_master_just_added:trans_eff_date and
+               gsn_master_compare:eff_date         = gsn_master_just_added:policy_eff_date then
+               {
+                change gsn_master_compare
+                  begin
+--                    gsn_master_compare:company_id       = l_company_id
+--                    gsn_master_compare:policy_no        = gsn_master_just_added:policy_no
+--                    gsn_master_compare:pol_year         = gsn_master_just_added:pol_year
+--                    gsn_master_compare:end_sequence     = gsn_master_just_added:end_sequence
+--                    gsn_master_compare:line_of_business = gsn_master_just_added:line_of_business
+--                    gsn_master_compare:lob_subline      = gsn_master_just_added:lob_subline
+--                    gsn_master_compare:trans_date       = gsn_master_just_added:trans_date
+--                    gsn_master_compare:trans_code       = gsn_master_just_added:trans_code
+--                    gsn_master_compare:TRANS_EFF        = gsn_master_just_added:TRANS_EFF_DATE
+--                    gsn_master_compare:EFF_DATE         = gsn_master_just_added:POLICY_EFF_DATE
+--                    gsn_master_compare:prem_no          = gsn_master_just_added:prem_no
+--                    gsn_master_compare:build_no         = gsn_master_just_added:BUILD_NO
+--                    gsn_master_compare:sub_code         = gsn_master_just_added:sub_code
+                    gsn_master_compare:premium          = gsn_master_compare:premium + gsn_master_just_added:premium
+                 end
+              }
+         }
+      next gsn_master_just_added
+    }
+END
+
+procedure process_scips_premium_file
+
+--this procedure will create a new file from premium that has the following key
+--COMPANY_ID+POLICY_NO+POL_YEAR+END_SEQUENCE+LINE_OF_BUSINESS+LOB_SUBLINE+TRANS_DATE+TRANS_CODE
+--this will then allow me to access this file by subline and trans_date to verify that my total for all my location are correct
+
+
+BEGIN
+  local unsigned ascii number l_count_change[8];
+  access prsmaster,
+     set prsmaster:company_id = "", generic
+
+  while prsmaster:errornumber = 0
+    {
+      if ((prsmaster:trans_date < l_starting_date and
+           prsmaster:trans_eff => l_starting_date and
+           prsmaster:trans_eff <= l_ending_date) or
+
+          (prsmaster:trans_date => l_starting_date and
+           prsmaster:trans_date <= l_ending_date and
+           prsmaster:trans_eff <= l_ending_date)) and
+
+           prsmaster:trans_eff <> prsmaster:trans_exp and
+           prsmaster:trans_code < 17 and
+           prsmaster:line_of_business one of 7 then
+        {
+--          write("%c-->prsmaster:policy_no-->%x<--",02011,prsmaster:policy_no)
+          access gsn_master_premium,
+             set gsn_master_premium:company_id       = prsmaster:company_id,
+                 gsn_master_premium:policy_no        = prsmaster:policy_no,
+                 gsn_master_premium:pol_year         = prsmaster:pol_year,
+                 gsn_master_premium:end_sequence     = prsmaster:end_sequence,
+                 gsn_master_premium:line_of_business = prsmaster:line_of_business,
+                 gsn_master_premium:lob_subline      = prsmaster:lob_subline,
+                 gsn_master_premium:trans_date       = prsmaster:trans_date,
+                 gsn_master_premium:trans_code       = prsmaster:trans_code, exact
+          if prsmaster:trans_code not one of 10,14 and
+             prsmaster:end_sequence one of 0 then
+            {
+              do verify_prsmaster_end_sequence(prsmaster:policy_no,prsmaster:pol_year)
+        --      write("%c<014>%x%x",1001,"sfpmaster_alias:policy_no",  sfpmaster_alias:policy_no)
+         --     write("%c%x%x",2001,"sfpmaster_alias:pol_year",        sfpmaster_alias:pol_year)
+         --     write("%c%x%x",3001,"sfpmaster_alias:end_sequence",    sfpmaster_alias:end_sequence)
+         --     write("%c%x%x",4001,"sfpmaster_alias:trans_code",      sfpmaster_alias:trans_code)
+              if l_fix_prsmaster_end_sequence <> 0 then
+                {
+                  if gsn_master_premium:company_id       <> prsmaster:company_id or
+                     gsn_master_premium:policy_no        <> prsmaster:policy_no or
+                     gsn_master_premium:pol_year         <> prsmaster:pol_year or
+                     gsn_master_premium:end_sequence     <> l_fix_prsmaster_end_sequence or
+                     gsn_master_premium:line_of_business <> prsmaster:line_of_business or
+                     gsn_master_premium:lob_subline      <> prsmaster:lob_subline or
+                     gsn_master_premium:trans_date       <> prsmaster:trans_date or
+                     gsn_master_premium:trans_code       <> prsmaster:trans_code then
+                    {
+                      add gsn_master_premium
+                        begin
+                          gsn_master_premium:company_id       = prsmaster:company_id
+                          gsn_master_premium:policy_no        = prsmaster:policy_no
+                          gsn_master_premium:pol_year         = prsmaster:pol_year
+                          gsn_master_premium:end_sequence     = l_fix_prsmaster_end_sequence
+                          gsn_master_premium:line_of_business = prsmaster:line_of_business
+                          gsn_master_premium:lob_subline      = prsmaster:lob_subline
+                          gsn_master_premium:trans_date       = prsmaster:trans_date
+                          gsn_master_premium:trans_code       = prsmaster:trans_code
+                          gsn_master_premium:trans_eff        = prsmaster:trans_eff
+                          gsn_master_premium:eff_date         = prsmaster:eff_date
+                          gsn_master_premium:premium          = prsmaster:premium
+                        end
+                    }
+                  else
+                    {
+                      change gsn_master_premium
+                        begin
+                          gsn_master_premium:company_id       = prsmaster:company_id
+                          gsn_master_premium:policy_no        = prsmaster:policy_no
+                          gsn_master_premium:pol_year         = prsmaster:pol_year
+                          gsn_master_premium:end_sequence     = l_fix_prsmaster_end_sequence
+                          gsn_master_premium:line_of_business = prsmaster:line_of_business
+                          gsn_master_premium:lob_subline      = prsmaster:lob_subline
+                          gsn_master_premium:trans_date       = prsmaster:trans_date
+                          gsn_master_premium:trans_code       = prsmaster:trans_code
+                          gsn_master_premium:trans_eff        = prsmaster:trans_eff
+                          gsn_master_premium:eff_date         = prsmaster:eff_date
+                          gsn_master_premium:premium          = gsn_master_premium:premium + prsmaster:premium
+                        end
+                       l_count_change = l_count_change + 1
+                     }
+                }
+            }
+          else
+            {
+              if gsn_master_premium:company_id       <> prsmaster:company_id or
+                 gsn_master_premium:policy_no        <> prsmaster:policy_no or
+                 gsn_master_premium:pol_year         <> prsmaster:pol_year or
+                 gsn_master_premium:end_sequence     <> prsmaster:end_sequence or
+                 gsn_master_premium:line_of_business <> prsmaster:line_of_business or
+                 gsn_master_premium:lob_subline      <> prsmaster:lob_subline or
+                 gsn_master_premium:trans_date       <> prsmaster:trans_date or
+                 gsn_master_premium:trans_code       <> prsmaster:trans_code then
+                {
+                  add gsn_master_premium
+                    begin
+                      gsn_master_premium:company_id       = prsmaster:company_id
+                      gsn_master_premium:policy_no        = prsmaster:policy_no
+                      gsn_master_premium:pol_year         = prsmaster:pol_year
+                      gsn_master_premium:end_sequence     = prsmaster:end_sequence
+                      gsn_master_premium:line_of_business = prsmaster:line_of_business
+                      gsn_master_premium:lob_subline      = prsmaster:lob_subline
+                      gsn_master_premium:trans_date       = prsmaster:trans_date
+                      gsn_master_premium:trans_code       = prsmaster:trans_code
+                      gsn_master_premium:trans_eff        = prsmaster:trans_eff
+                      gsn_master_premium:eff_date         = prsmaster:eff_date
+                      gsn_master_premium:premium          = prsmaster:premium
+                    end
+                }
+              else
+                {
+                  change gsn_master_premium
+                    begin
+                      gsn_master_premium:company_id       = prsmaster:company_id
+                      gsn_master_premium:policy_no        = prsmaster:policy_no
+                      gsn_master_premium:pol_year         = prsmaster:pol_year
+                      gsn_master_premium:end_sequence     = prsmaster:end_sequence
+                      gsn_master_premium:line_of_business = prsmaster:line_of_business
+                      gsn_master_premium:lob_subline      = prsmaster:lob_subline
+                      gsn_master_premium:trans_date       = prsmaster:trans_date
+                      gsn_master_premium:trans_code       = prsmaster:trans_code
+                      gsn_master_premium:trans_eff        = prsmaster:trans_eff
+                      gsn_master_premium:eff_date         = prsmaster:eff_date
+                      gsn_master_premium:premium          = gsn_master_premium:premium + prsmaster:premium
+                    end
+                   l_count_change = l_count_change + 1
+                 }
+            }
+        }
+
+      next prsmaster
+    }
+END
+
+procedure verify_prsmaster_end_sequence(number p_policy_no,number p_pol_year)
+
+begin
+  l_fix_prsmaster_end_sequence = 0
+  access sfpmaster_alias,
+     set sfpmaster_alias:policy_no = p_policy_no,
+         sfpmaster_alias:pol_year  = p_pol_year, generic
+
+  while (sfpmaster_alias:policy_no = p_policy_no and
+         sfpmaster_alias:pol_year  = p_pol_year) and
+         l_fix_prsmaster_end_sequence = 0
+    {
+      if ((sfpmaster_alias:premium_trans_date < l_starting_date and
+           sfpmaster_alias:trans_eff => l_starting_date and
+           sfpmaster_alias:trans_eff <= l_ending_date) or
+
+         (sfpmaster_alias:premium_trans_date => l_starting_date and
+          sfpmaster_alias:premium_trans_date <= l_ending_date and
+          sfpmaster_alias:trans_eff <= l_ending_date)) and
+          sfpmaster_alias:trans_eff <> sfpmaster:trans_exp and
+          sfpmaster_alias:trans_code not one of 10,14 then
+        {
+          if sfpmaster_alias:premium_trans_date = prsmaster:trans_date and
+             sfpmaster_alias:trans_eff          = prsmaster:trans_eff then
+            {
+              l_fix_prsmaster_end_sequence = sfpmaster_alias:end_sequence
+            }
+        }
+      next sfpmaster_alias
+    }
+end
+
+procedure get_umbrella
+
+BEGIN
+  access cppumbrella,
+     set cppumbrella:policy_no    = sfplocation:policy_no,
+         cppumbrella:pol_year     = sfplocation:pol_year,
+         cppumbrella:end_sequence = sfplocation:end_sequence,exact
+END
+
+Procedure get_liability
+
+BEGIN
+  access cppliability,
+     set cppliability:policy_no     = sfplocation:policy_no,
+         CPPLIABility:pol_year      = sfplocation:pol_year,
+         CPPLIABility:end_sequence  = sfplocation:end_sequence,
+         cppliability:prem_no       = sfplocation:prem_no,
+         cppliability:build_no      = sfplocation:build_No, generic
+END
+
+procedure check_if_claim_was_made(number p_policy_no,
+                                  rwdate p_eff_date,
+                                  rwdate p_exp_date)
+
+BEGIN
+  access lrssetup,
+     set lrssetup:policy_no  = p_policy_no, exact
+
+  l_claims_count = 0
+  while lrssetup:policy_no = p_policy_no
+    {
+      if lrssetup:loss_date >= p_eff_date and
+         lrssetup:loss_date <= p_exp_date  then
+        {
+          l_claim_count = l_claim_count + 1
+        }
+      next lrssetup
+    }
+END
+
+procedure check_for_county(number p_state, number p_county)
+
+BEGIN
+  unsigned ascii number l_state[2] = p_state ;
+  unsigned ascii number l_county[3] = p_county;
+  access sfsstate,
+     set sfsstate:company_id = sfpname:company_id,
+         sfsstate:state      = l_state,
+         sfsstate:county     = l_county, generic
+
+  l_county_str  = SFSSTATE:DESCRIPTION
+END
+
+procedure fill_in_locals_by_LOB
+
+BEGIN
+  unsigned ascii number l_loop[2];
+  l_construction_class  = "N/A"
+  l_deductible          = ""
+  l_occupancy_type      = ""
+  l_no_units            = ""
+  l_premium             = 0
+  l_building_deductible = ""
+  l_wind_deductible     = ""
+  l_form                = ""
+  l_liability_code      = 0
+  l_coinsurance_factor  = ""
+  l_protection          = ""
+  for l_loop = 1 to 30
+    {
+      l_limit[l_loop]   = 0
+    }
+
+  switch (sfsline:lob_code)
+    CASE "UMBRELLA" : BEGIN
+                        l_Limit[12]   = cppumbrella:general_aggregate
+                        l_Limit[9]    = cppumbrella:PRODUCTS
+                        l_Limit[8]    = cppumbrella:PERSONAL_ADD_INJURY
+                        l_Limit[7]    = cppumbrella:occurrence
+                        l_res_condo = 0
+                        l_construction_class = "N/A"
+                      END
+   }  --END SWITCH
+END
+
+procedure add_to_gsn_master
+
+BEGIN
+  local file cppliability_all_locations  = alias for cppliability;
+  unsigned ascii number l_add_products[1],
+                        l_add_premise[1],
+                        l_add_crime[1],
+                        l_add_inland[1],
+                        l_add_glass[1],
+                        l_stored_loc[2],
+                        l_add_irpm_only_once[1];
+  string l_crime_form[1];
+
+  access sfsdefault,
+     set sfsdefault:sfs_code = "SFS", exact
+
+/*        write("%c<014>%S%x",01001,"l_policy_no",l_policy_no)
+        write("%c%S%x",02001,"l_pol_year",l_pol_year)
+        write("%c%S%x",03001,"l_end_sequence",l_end_sequence)
+        write("%c%S%x",04001,"l_holdpolicy_no",l_hold_policy_no)
+        write("%c%S%x",05001,"l_hold pol_year",l_hold_pol_year)
+        write("%c%S%x",06001,"l_hold end_sequence",l_hold_end_sequence) 
+*/
+--       Read (23,1,"Press Enter to Continue ",L_ENTER,1)
+
+  if l_hold_policy_no    <> l_policy_no or
+     l_hold_pol_year     <> l_pol_Year or
+     l_hold_end_sequence <> l_end_sequence then
+    {
+      --put the check for deleted location here.
+      if (l_hold_policy_no <> l_policy_no and
+          l_hold_policy_no <> 0) or
+         (l_hold_end_sequence <> l_end_sequence and
+          l_hold_policy_no = l_policy_no) then
+        {
+--          do check_for_minimum_premium
+          do check_for_deleted_location
+        }
+
+      --calculate the prsmaster:total and sfplocation:totals
+      l_current_total_premium    = 0
+      L_identity_theft_only_once = 0
+      l_terrorism_only_once      = 0
+      l_sfpend_forms_only_once = 0
+      l_percent_of_prsmaster   = 0
+      l_hold_policy_no         = l_policy_no
+      l_hold_pol_Year          = l_pol_year
+      l_hold_end_sequence      = l_end_sequence
+      l_hold_prem_no           = l_prem_no
+      l_hold_build_no          = l_build_no
+      l_hold_line_of_business  = l_line_of_business
+      l_hold_lob_subline       = l_lob_subline
+      l_sub_code               = 0
+      l_do_only_once           = 0
+      l_calculate_money_once   = 0
+      l_do_terrorism_only_once = 0
+      l_misc                   = 0
+      l_liability_deductible   = ""
+      l_deductible             = ""
+      l_iso_statement_line     = ""
+      l_county_str             = ""
+      l_process_umbrella_once  = 0
+      l_liability_is_policy_wide = 0  --used for contractors to only total liabiity once
+      l_identity_theft = 0            --used for contractors to only total theft once
+    }
+
+  switch (sfpmaster:trans_code)
+    case 10 : l_policy_indicator = "NEW"
+    case 11 : l_policy_indicator = "CANCELLED"
+    case 12 : l_policy_indicator = "INCREASE COVERAGE"
+    case 13 : l_policy_indicator = "DECREASE COVERAGE"
+    case 14 : BEGIN
+                if sfpname:eff_date >= 01.25.2016 then
+                  l_policy_indicator = "RENEWAL"
+                else
+                  l_policy_indicator = "NEW"
+              END
+    case 15 : l_policy_indicator = "AUDIT"
+    case 16 : l_policy_indicator = "REINSTATEMENT"
+  END
+
+  do check_if_claim_was_made(sfpname:policy_no,sfpname:eff_date, sfpname:exp_date)
+
+  switch (sfsline:lob_code)
+    case "UMBRELLA" : BEGIN
+                        do get_umbrella
+                        do check_for_county(sfplocation:state,sfplocation:county)
+                        l_year_built = 0
+                        l_state = sfplocation:state
+                        l_type_of_policy = 10
+                        do fill_in_locals_by_LOB
+                        if l_process_umbrella_once = 0 then
+                          {
+                            l_process_umbrella_once = 1
+                            do process_UMBRELLA    --UMBRELLA
+                          }
+                      END
+  END
+end
+
+procedure process_umbrella
+
+BEGIN
+  access cppumunderlying,
+     set cppumunderlying:policy_no    = l_policy_no,
+         cppumunderlying:pol_year     = l_pol_year,
+         cppumunderlying:end_sequence = l_end_sequence, generic
+
+  l_class_code = 99935
+  l_iso_class_code = "99935"
+
+  access sfsline_by_subline,
+     set sfsline_by_subline:company_id       = sfsline:company_id,
+         sfsline_by_subline:line_of_business = sfsline:line_of_business, generic
+
+  while sfsline_by_subline:company_id       = sfsline:company_id and
+        sfsline_by_subline:line_of_business = sfsline:line_of_business
+    {
+      l_lob_subline = sfsline_by_subline:lob_subline
+      switch (sfsline_by_subline:lob_code)
+        case "TERROR"  : begin
+                           l_premium = sfpmaster:terrorism_premium
+                           do gsn_master_add
+                         end
+        case "ONE"  : begin
+                           l_premium = sfpmaster:total[1]
+                           l_iso_policy_limit_code = "18"
+                           do gsn_master_add
+                         end
+        case "TWO"  : begin
+                           l_premium = sfpmaster:total[2]
+                           l_iso_policy_limit_code = "20"
+                           do gsn_master_add
+                         end
+        case "THREE"  : begin
+                           l_premium = sfpmaster:total[3]
+                           l_iso_policy_limit_code = "22"
+                           do gsn_master_add
+                         end
+        case "FOUR"  : begin
+                           l_premium = sfpmaster:total[4]
+                           l_iso_policy_limit_code = "23"
+                           do gsn_master_add
+                         end
+        case "FIVE"  : begin
+                           l_premium = sfpmaster:total[5]
+                           l_iso_policy_limit_code = "23"
+                           do gsn_master_add
+                         end
+        case "ELONE"  : begin
+                           l_premium = sfpmaster:other_totals[1]
+                           do gsn_master_add
+                         end
+        case "ELTWO"  : begin
+                           l_premium = sfpmaster:other_totals[2]
+                           do gsn_master_add
+                         end
+        case "ELTHREE"  : begin
+                           l_premium = sfpmaster:other_totals[3]
+                           do gsn_master_add
+
+                         end
+        case "ELFOUR"  : begin
+                           l_premium = sfpmaster:other_totals[4]
+                           do gsn_master_add
+                         end
+        case "ELFIVE"  : begin
+                           l_premium = sfpmaster:other_totals[5]
+                           do gsn_master_add
+                         end
+      end
+      next sfsline_by_subline
+    }
+END
+
+Procedure PRO_RATA
+
+Begin
+  I_EFF_DATE = Dateadd(sfpmaster_check_endorsement:TRANS_EXP,0,-1)
+  I_SHORT_RATE = sfpmaster_check_endorsement:SHORT_RATE
+  I_TOTAL_DAYS = I_EFF_DATE - sfpmaster_check_endorsement:TRANS_EXP
+  I_CX_DAYS = I_EFF_DATE - sfpmaster_check_endorsement:TRANS_EFF
+  Include "prorata.pro"
+End
+
+
+procedure check_for_deleted_location
+
+--this procedure will access the gsn_master file and check to see if the prior endorsement
+--  to the current endorsement has any missing locations/coverages.
+
+BEGIN
+local file gsn_master_prior = alias for gsn_master;
+local file sfpname_current = alias for sfpname;
+local file sfpmaster_current = alias for sfpmaster;
+
+local signed ascii number l_difference[9] = 0,
+                          l_save_prem_no[4],
+                          l_prior_end_sequence[4],
+                          l_save_build_no[4];
+
+local array [10] of unsigned ascii number l_saved_subline[4];
+local unsigned ascii number l_looping[4];
+string l_policy_suffix[3];
+local unsigned ascii number L_current_trans_code[2];
+
+wdate l_trans_date,
+      l_policy_eff_date,
+      l_trans_eff_date,
+      l_trans_exp_date,
+      l_policy_exp_date;
+
+access gsn_master_loop,
+   set gsn_master_loop:policy_no        = l_hold_policy_no,
+       gsn_master_loop:pol_year         = l_hold_pol_year,
+       gsn_master_loop:end_sequence     = l_hold_end_sequence, generic      --use the current endorsement to access when the endorsement in the the same as the l_endorsement and the pol_year and policy is the same
+
+--I need to find the previous end_sequence.  it will not always be end_sequence -1 so If I go previous here I can save the previous end_sequence and then access it with the correct end_sequence.
+--I only need to check the prior endorsment no others are needed because this is done every time a policy endorsement is finished.
+
+while gsn_master_loop:policy_no        = l_hold_policy_no and
+      gsn_master_loop:pol_year         = l_hold_pol_year and
+      gsn_master_loop:end_sequence     = l_hold_end_sequence
+  {
+    previous gsn_master_loop
+  }
+
+if gsn_master_loop:policy_no        = l_hold_policy_no and   --make sure there is a prior to add something from.
+   gsn_master_loop:pol_year         = l_hold_pol_year then
+  {
+    l_prior_end_sequence = gsn_master_loop:end_sequence    --need to save this to use later so I know the end_sequence to check with.
+
+    --I have to loop from all the location of the prior record and compare it to the one that was just entered to see if there are any deleted location
+    --If I find something that is not in the current endorsement then I need to add the prior record into the current and put it as a negative premium
+
+    access gsn_master_current,
+       set gsn_master_current:policy_no    = l_hold_policy_no,
+           gsn_master_current:pol_year     = l_hold_pol_year,
+           gsn_master_current:end_sequence = l_hold_end_sequence, generic
+
+    access sfpname_current,
+       set sfpname_current:policy_no    = l_hold_policy_no,
+           sfpname_current:pol_year     = l_hold_pol_year,
+           sfpname_current:end_sequence = l_hold_end_sequence, generic
+
+    access sfpmaster_current,
+       set sfpmaster_current:policy_no    = l_hold_policy_no,
+           sfpmaster_current:pol_year     = l_hold_pol_year,
+           sfpmaster_current:end_sequence = l_hold_end_sequence, generic
+
+    --I need to get the dates of the current endorsement and save them so I can then add them back in when I add in the missing location with the current endorsments dates.
+
+    if gsn_master_current:policy_no    = l_hold_policy_no and
+       gsn_master_current:pol_year     = l_hold_pol_year and
+       gsn_master_current:end_sequence = l_hold_end_sequence then
+      {
+        l_current_trans_code  = gsn_master_current:trans_code
+        l_trans_date          = gsn_master_current:trans_date
+        l_policy_eff_date     = gsn_master_current:policy_eff_date
+        l_policy_exp_date     = gsn_master_current:policy_exp_date
+        l_trans_eff_date      = gsn_master_current:trans_eff_date
+        l_trans_exp_date      = gsn_master_current:trans_exp_date
+        l_policy_suffix       = gsn_master_current:policy_suffix
+      }
+
+    access gsn_master_prior,
+       set gsn_master_prior:policy_no        = l_hold_policy_no,
+           gsn_master_prior:pol_year         = l_hold_pol_year,
+           gsn_master_prior:end_sequence     = l_prior_end_sequence, generic
+
+    while gsn_master_prior:policy_no        = l_hold_policy_no and
+          gsn_master_prior:pol_year         = l_hold_pol_year and
+          gsn_master_prior:end_sequence     = l_prior_end_sequence
+      {
+
+            access gsn_master_current,
+               set gsn_master_current:policy_no        = gsn_master_prior:policy_no,
+                   gsn_master_current:pol_year         = gsn_master_prior:pol_year,
+                   gsn_master_current:end_sequence     = l_hold_end_sequence,
+                   gsn_master_current:prem_no          = gsn_master_prior:prem_no,
+                   gsn_master_current:build_no         = gsn_master_prior:build_no,
+                   gsn_master_current:line_of_business = gsn_master_prior:line_of_business,
+                   gsn_master_current:lob_subline      = gsn_master_prior:lob_subline, generic
+
+        if gsn_master_current:policy_no        <> gsn_master_prior:policy_no or
+           gsn_master_current:pol_year         <> gsn_master_prior:pol_year or
+           gsn_master_current:end_sequence     <> l_hold_end_sequence or
+           gsn_master_current:prem_no          <> gsn_master_prior:prem_no or
+           gsn_master_current:build_no         <> gsn_master_prior:build_no or
+           gsn_master_current:line_of_business <> gsn_master_prior:line_of_business or
+           gsn_master_current:lob_subline      <> gsn_master_prior:lob_subline then
+          {
+            l_premium = gsn_master_prior:annual_premium
+            if sfpmaster_current:trans_eff <> sfpname_current:eff_date then
+              {
+                I_EFF_DATE = Dateadd(l_trans_exp_date,0,-1)
+                I_SHORT_RATE = SFPMASTER_current:SHORT_RATE
+                I_TOTAL_DAYS = I_EFF_DATE - l_TRANS_EXP_date
+                I_CX_DAYS = I_EFF_DATE - l_TRANS_EFF_date
+                Include "prorata.pro"
+                l_difference = l_premium * I_pro_rata
+                l_premium = l_difference
+              }
+            l_premium = l_premium * -1
+            if gsn_master_prior:mark_as_deleted_location not one of 1 then   --this will eliminate adding the location to every subsquent endorsement
+              {
+                add gsn_master_current
+                  begin
+                    gsn_master_current:POLICY_NO                = gsn_master_prior:policy_no
+                    gsn_master_current:POL_YEAR                 = gsn_master_prior:pol_year
+                    gsn_master_current:END_SEQUENCE             = l_hold_end_sequence
+                    gsn_master_current:PREM_NO                  = gsn_master_prior:prem_no
+                    gsn_master_current:BUILD_NO                 = gsn_master_prior:build_No
+                    gsn_master_current:lob_subline              = gsn_master_prior:lob_subline
+                    gsn_master_current:line_of_business         = gsn_master_prior:line_of_business
+                    gsn_master_current:SUB_CODE                 = gsn_master_prior:sub_code
+                    gsn_master_current:record_rdf               = gsn_master_prior:record_rdf/raw
+                    gsn_master_current:trans_date               = l_trans_date
+                    gsn_master_current:trans_code               = l_current_trans_code
+                    gsn_master_current:policy_eff_date          = l_policy_eff_date
+                    gsn_master_current:trans_eff_date           = l_trans_eff_date
+                    gsn_master_current:trans_exp_date           = l_trans_exp_date
+                    gsn_master_current:save_current_premium     = l_premium
+                    gsn_master_current:premium                  = l_Premium
+                    gsn_master_current:annual_premium           = gsn_master_prior:annual_premium
+                    gsn_master_current:accounting_date          = l_ending_date
+                    gsn_master_current:mark_as_deleted_location = 1
+                    gsn_master_current:coverage_exposure        = l_exposure
+                    gsn_master_current:iso_class_code           = gsn_master_prior:iso_class_code
+                    gsn_master_current:iso_cf_year_of_construction   = "N/A"
+                    gsn_master_current:iso_bop_year_of_construction  = "N/A"
+                  END
+              }
+          }
+        next gsn_master_prior
+      }
+  } --end of the if
+END
+
+procedure check_for_endorsement
+
+BEGIN
+  local unsigned ascii number l_previous_end_sequence[4];
+  local signed ascii number l_previous_total[9];
+  local signed ascii number l_diff_total[9];
+  l_save_premium = 0
+
+  access sfpmaster_check_endorsement,
+     set sfpmaster_check_endorsement:policy_no    = l_policy_no,
+         sfpmaster_check_endorsement:pol_year     = l_pol_year,
+         sfpmaster_check_endorsement:end_sequence = l_end_sequence, generic
+
+  if sfpmaster_check_endorsement:trans_code one of 11,12,13,15,16 then
+    {  --check if prior endorsement is there
+      l_previous_end_sequence = l_end_sequence - 1
+      access gsn_master_previous,
+         set gsn_master_previous:policy_no        = l_policy_no,
+             gsn_master_previous:pol_year         = l_pol_year,
+             gsn_master_previous:end_sequence     = l_previous_end_sequence,
+             gsn_master_previous:prem_no          = l_prem_no,
+             gsn_master_previous:build_no         = l_build_no,
+             gsn_master_previous:line_of_business = l_line_of_business,
+             gsn_master_previous:lob_subline      = l_lob_subline,
+             gsn_master_previous:line_type        = l_line_type,
+             gsn_master_previous:sub_code         = l_sub_code, exact
+
+      if gsn_master_previous:policy_no        = l_policy_no and
+         gsn_master_previous:pol_year         = l_pol_year and
+         gsn_master_previous:end_sequence     = l_previous_end_sequence and
+         gsn_master_previous:prem_no          = l_prem_no and
+         gsn_master_previous:build_no         = l_build_no and
+         gsn_master_previous:line_of_business = l_line_of_business and
+         gsn_master_previous:lob_subline      = l_lob_subline and
+         gsn_master_previous:line_type        = l_line_type and
+         gsn_master_previous:sub_code         = l_sub_code then
+        {
+          l_previous_total = 0
+          l_previous_total = gsn_master_previous:annual_premium
+          l_save_premium = l_premium
+          l_diff_total = l_premium - l_previous_total     --take current_premium - previous end_sequence premium to get the current_premium to add to gsn_master.
+          l_annual_premium = l_premium
+          if sfpmaster_check_endorsement:trans_code one of 11 then
+            {
+              if sfpmaster_check_endorsement:trans_eff = sfpname:eff_date then
+                {
+                  l_annual_premium = l_annual_premium * -1
+                  l_premium = l_premium * -1
+                }
+              else
+                {
+                  do pro_rata
+                  l_diff_total = l_annual_premium * I_pro_rata
+                  l_premium = l_diff_total * -1
+                  l_annual_premium = l_annual_premium * -1
+                }
+            }
+          else
+            if sfpmaster_check_endorsement:trans_code one of 16 then
+              {
+                if sfpmaster_check_endorsement:trans_eff = sfpname:eff_date then
+                  {
+                    l_premium = l_premium
+                    l_annual_premium = l_annual_premium
+                  }
+                else
+                  {
+                    do pro_rata
+                    l_diff_total = l_annual_premium * I_pro_rata
+                    l_annual_premium = l_annual_premium
+                    l_premium = l_diff_total
+                  }
+              }
+            else
+              if l_diff_total <> 0 then
+                {
+                  if sfpmaster_check_endorsement:trans_eff <> sfpname:eff_date then
+                    {
+                      do pro_rata
+                      l_diff_total = l_diff_total * I_pro_rata
+                    }
+                  l_premium = l_diff_total
+                }
+        }
+      else   --was not found on prevous endorsement and need to check date to see if pro_rata is needed else just use l_premium
+        {
+          if sfpmaster_check_endorsement:trans_eff <> sfpname:eff_date then
+            {
+              do pro_rata
+              l_premium = l_premium  * I_pro_rata
+            }
+        }
+    }
+
+END
+
+procedure write_difference_in_premium
+
+BEGIN
+  -- L_premium is the total premium of the current subline and endorsement.
+  signed ascii number l_new_premium_to_add[9],
+                      l_save_annual_prior[9],
+                      l_current_premium_to_add[9];
+
+
+  access gsn_master_loop,
+     set gsn_master_loop:policy_no        = l_policy_no,
+         gsn_master_loop:pol_year         = l_pol_year,  generic      --beginning of the current policy and pol_year
+
+  while gsn_master_loop:policy_no    = l_policy_no and
+        gsn_master_loop:pol_year     = l_pol_year
+    {
+      if gsn_master_loop:prem_no     = l_prem_no and
+         gsn_master_loop:build_No    = l_build_no and
+         gsn_master_loop:lob_subline = l_lob_subline and
+         l_line_of_business one of 7 then
+        {
+          l_current_premium_to_add = l_current_premium_to_add + gsn_master_loop:premium    --was just premium
+          l_save_annual_prior = gsn_master_loop:annual_premium
+        }
+      next gsn_master_loop
+    }  --now I should have the correct total for this endorsement now I need to compare it to the the premium I am adding.
+
+if sfpmaster:trans_eff <> sfpname:eff_date then --prorat
+  {
+    if l_save_annual_prior = l_annual_premium then
+      {
+        l_premium = 0
+        l_save_premium = 0
+      }
+    else
+      if l_premium >= l_current_premium_to_add then      --  l_current_premium_to_add >= l_premium then
+        {
+          l_new_premium_to_add = l_premium - l_current_premium_to_add
+          l_save_premium = l_premium
+          l_premium = l_new_premium_to_add
+        }
+      else
+        {
+          l_premium = l_premium
+          l_save_premium = l_current_premium_to_add + l_premium
+        }
+  }
+else
+  if l_save_annual_prior = l_annual_premium then
+    {
+      l_premium = 0
+      l_save_premium = 0
+    }
+  else
+    if l_premium >= l_current_premium_to_add then
+      {
+        l_new_premium_to_add = l_premium - l_current_premium_to_add
+        l_save_premium = l_premium
+        l_premium = l_new_premium_to_add
+      }
+END
+
+procedure gsn_master_add
+
+BEGIN
+  string l_auto_state[2];
+  unsigned ascii number l_start_end_sequence[4] = 0;
+  l_annual_premium = l_premium
+  if l_end_sequence > 0 then
+    {
+      do check_for_endorsement
+
+      if sfpmaster:trans_code not one of 11,16 then
+        {
+          do write_difference_in_premium
+        }
+    }
+    add gsn_master
+      begin
+        gsn_master:POLICY_NO                         = l_policy_no
+        gsn_master:POL_YEAR                          = l_pol_year
+        gsn_master:END_SEQUENCE                      = l_end_sequence
+        gsn_master:PREM_NO                           = l_prem_no
+        gsn_master:BUILD_NO                          = l_build_No
+        gsn_master:lob_subline                       = l_lob_subline
+        gsn_master:line_of_business                  = l_Line_of_business
+        gsn_master:line_type                         = l_line_type
+        gsn_master:SUB_CODE                          = l_sub_code
+        gsn_master:SEQUENCE_NUMBER                   = l_END_SEQUENCE
+        gsn_master:payment_plan                      = l_payment_plan 
+        if sfpname:original_eff_date <= 01.25.2016 and
+           sfpname:eff_date >= 01.25.2016 then
+          {
+            access sfpname_alias,
+               set sfpname_alias:policy_no    = sfpname:policy_no,
+                   sfpname_alias:pol_year     = sfpname:pol_year,
+                   sfpname_alias:end_sequence = l_start_end_sequence, exact
+
+            if sfpname_alias:policy_no    = sfpname:policy_no and
+               sfpname_alias:pol_year     = sfpname:pol_year and
+               sfpname_alias:end_sequence = 0 then
+              {
+                if sfpname_alias:trans_code one of 10 then
+                  {
+                    l_policy_suffix = 0
+                  }
+                else
+                  {
+                    l_policy_suffix = year(sfpname:eff_date) - year(sfsdefault:starting_date)
+                  }
+              }
+            else
+              {
+                l_policy_suffix = year(sfpname:eff_date) - year(sfsdefault:starting_date)
+              }
+          }
+        else
+          {
+            l_policy_suffix = 0
+          }
+        gsn_master:policy_suffix                     = str(l_policy_suffix,"999")
+        gsn_master:ACCOUNTING_DATE                   = l_ending_date
+        gsn_master:eff_date                          = sfpname:eff_date
+        gsn_master:POLICY_EFF_DATE                   = sfpname:eff_date
+        gsn_master:POLICY_EXP_DATE                   = sfpname:exp_date
+        gsn_master:trans_exp_date                    = sfpmaster:trans_exp
+        gsn_master:POLICY_INDICATOR                  = L_POLICY_INDICATOR
+        gsn_master:TRANS_EFF_DATE                    = sfpmaster:trans_eff
+        gsn_master:trans_code                        = sfpmaster:trans_code
+        gsn_master:CLAIMS_MADE_POLICY_INDICATOR      = "NA"
+        gsn_master:RETROACTIVE_DATE                  = 00.00.0000
+        gsn_master:DISCOVERY_DATE                    = 00.00.0000
+        L_insured_name = ""
+        I_rev_name = ""
+        access sfscompany,
+           set sfscompany:company_id = l_company_id, exact
+        I_name = sfpname:name[1]
+        include "sfsrevname7.pro"
+        l_insured_name = I_rev_name
+        if trun(sfpname:name[2]) <> "" then
+          {
+            I_name = sfpname:name[2]
+            include "sfsrevname7.pro"
+            l_insured_name = trun(l_insured_name) + " " + I_rev_name
+          }
+        if trun(sfpname:name[3]) <> "" then
+          {
+            I_name = sfpname:name[3]
+            include "sfsrevname7.pro"
+            l_insured_name = trun(l_insured_name) + " " + I_rev_name
+          }
+
+        gsn_master:INSURED_NAME                      = l_insured_name
+        gsn_master:INSURED_ADDRESS                   = trun(sfpname:address[1]) + " " + trun(sfpname:address[2]) + " " + trun(sfpname:address[3])
+        gsn_master:INSURED_CITY                      = sfpname:city
+        gsn_master:INSURED_STATE                     = sfpname:str_state
+        gsn_master:INSURED_ZIP[1,5]                  = sfpname:str_zipCode[1,5]
+        gsn_master:SIC_CODE                          = l_iso_sic_code
+        gsn_master:TYPE_OF_POLICY                    = str(l_type_of_policy)
+        gsn_master:COMPANY_NAME                      = trun(sfscompany:name[1]) + " " + sfscompany:name[2]
+        gsn_master:COMPANY_CODE                      = "GSN"             --need claification from ani
+        gsn_master:FAC_INDICATOR                     = L_FAC_INDICATOR
+        gsn_master:SITE_ADDRESS                      = Trun(sfplocation:address) + trun(SFPLOCATION:ADDRESS1[1]) + " " + trun(SFPLOCATION:ADDRESS1[2]) + " " + TRUN(SFPLOCATION:ADDRESS1[3])
+        gsn_master:SITE_CITY                         = SFPLOCATION:CITY
+        gsn_master:SITE_STATE                        = SFPLOCATiON:str_STATE
+        gsn_master:SITE_ZIP                          = SFPLOCATION:str_ZIPCODE[1,5]
+
+        gsn_master:SITE_COUNTY                       = L_COUNTY_STR
+--        gsn_master:TERRITORY_CODE_ISO                = ""  -- not neede because of state nj,de,pa adopted the zipcode terrioty rating
+        gsn_master:TERRITORY_CODE_ISO                = str(cppumbrella:territory)
+        gsn_master:CONSTRUCTION_CLASS                = l_construction_class
+        switch (l_protection)
+          case "5" : l_protection1 = "10"   --correct
+          case "4" : l_protection1 = "5"
+          case "3" : l_protection1 = "5"
+          case "2" : l_protection1 = "5"
+          case "1" : l_protection1 = "5"
+        end
+        gsn_master:PROTECTION_CLASS_ISO              = l_protection1
+        gsn_master:CLASS_CODE                        = l_class_code
+        gsn_master:iso_class_code                    = l_iso_class_code
+        gsn_master:wind_DEDUCTIBLE                   = val(l_wind_deductible)
+        gsn_master:BCEG                              = ""  --something in iso ask ani
+        gsn_master:PREMIUM                           = l_premium
+        if sfpmaster:trans_code one of 10,14 then
+          {
+            gsn_master:save_current_premium          = l_premium
+          }
+        else
+          {
+            gsn_master:save_current_premium          = l_save_premium
+          }
+
+        access sfsline2,
+           set sfsline2:Company_id       = l_company_id,
+               sfsline2:line_of_business = l_line_of_business,
+               sfsline2:lob_subline      = l_lob_subline , exact
+
+        gsn_master:ANNUAL_STATEMENT_LOB          = sfsline2:ISO_STMT_LOB
+        gsn_master:DEDUCTIBLE                        = val(l_deductible)
+        gsn_master:property_deductible           = l_deductible
+        gsn_master:LIABILITY_DEdUCTIBLE              = l_liability_deductible
+        --umbrella make sure all other limit are zero except the ones that are used for umbrella
+                     l_limit[1] = 0
+                     l_limit[2] = 0
+                     l_limit[3] = 0
+                     l_limit[4] = 0
+                     l_limit[5] = 0
+                     l_limit[6] = 0
+                     l_limit[10] = 0
+                     l_limit[11] = 0
+                     l_limit[13] = 0
+                     l_limit[14] = 0
+                     l_limit[15] = 0
+                     l_limit[16] = 0
+                     l_limit[17] = 0
+                     l_limit[18] = 0
+                     l_limit[19] = 0
+                     l_limit[20] = 0
+                     l_limit[21] = 0
+                     l_limit[22] = 0
+                     l_limit[23] = 0
+                     l_limit[24] = 0
+                     l_limit[25] = 0
+                     l_limit[26] = 0
+                     l_limit[27] = 0
+                     l_limit[28] = 0
+                     l_limit[29] = 0
+                     l_limit[30] = 0
+
+        gsn_master:LIMIT[1]                          = l_limit[1]
+        gsn_master:LIMIT[2]                          = l_limit[2]
+        gsn_master:LIMIT[3]                          = l_limit[3]
+        gsn_master:LIMIT[4]                          = l_limit[4]
+        gsn_master:LIMIT[5]                          = l_limit[5]
+        gsn_master:LIMIT[6]                          = l_limit[6]
+        gsn_master:LIMIT[7]                          = l_limit[7]
+        gsn_master:LIMIT[8]                          = l_limit[8]
+        gsn_master:LIMIT[9]                          = l_limit[9]
+        gsn_master:LIMIT[10]                         = l_limit[10]
+        gsn_master:LIMIT[11]                         = l_limit[11]
+        gsn_master:LIMIT[12]                         = l_limit[12]
+        gsn_master:LIMIT[13]                         = l_limit[13]
+        gsn_master:LIMIT[14]                         = l_limit[14]
+        gsn_master:LIMIT[15]                         = l_limit[15]
+        gsn_master:LIMIT[16]                         = l_limit[16]
+        gsn_master:LIMIT[17]                         = l_limit[17]
+        gsn_master:LIMIT[18]                         = l_limit[18]
+        gsn_master:LIMIT[19]                         = l_limit[19]
+        gsn_master:LIMIT[20]                         = l_limit[20]
+        gsn_master:LIMIT[21]                         = l_limit[21]
+        gsn_master:LIMIT[22]                         = l_limit[22]
+        gsn_master:LIMIT[23]                         = l_limit[23]
+        gsn_master:LIMIT[24]                         = l_limit[24]
+        gsn_master:LIMIT[25]                         = l_limit[25]
+        gsn_master:LIMIT[26]                         = l_limit[26]
+        gsn_master:LIMIT[27]                         = l_limit[27]
+        gsn_master:LIMIT[28]                         = l_limit[28]
+        gsn_master:LIMIT[29]                         = l_limit[29]
+        gsn_master:LIMIT[30]                         = l_limit[30]
+        gsn_master:CO_INSURANCE_FACTOR               = l_coinsurance_factor
+        gsn_master:SUBLINE_CODE                      = l_lob_subline
+        gsn_master:ISOCOVERAGECODE                   = "3"
+        gsn_master:TERRORISM_COVERAGE_CODE           = "2"
+        gsn_master:STATEEXCEPTIONCODE                = l_state_exception_code
+        gsn_master:RATINGIDCODE                      = l_rating_id_code
+        gsn_master:ORDINANCELAWID                    = "5"   --need to change this based on gsn
+        gsn_master:RATEGROUP                         = ""
+        gsn_master:CLASS_LIMIT                       = ""
+        gsn_master:LCE_EFF_DATE                      = 00.00.0000
+        gsn_master:TYPEOFEQUIPMENTCODE               = ""
+        gsn_master:EMPLOYEES                         = ""
+        gsn_master:RATABLEEMPLOYEES                  = ""
+        gsn_master:PREMISES                          = ""
+        gsn_master:FORM_CODE                         = l_form
+        gsn_master:LIMIT_ID                          = "01"    --not applicable always single limit use 01
+        gsn_master:TOTAL_RATING_MOD_FACTOR           = str(l_total_rate_modification_factor)
+        gsn_master:DEDUCTIBLE_BASIS                  = "DOLLARS"
+        gsn_master:CO_INSURANCE_MODIFIER             = ""
+        gsn_master:INFLATION_GUARD_FACTOR            = ""
+        gsn_master:INCREASED_LIMITS_FACTOR           = ""
+        gsn_master:DEDUCTIBLE_FACtor                 = ""
+        gsn_master:SCHEDULE_RATING_FACTOR            = ""
+        gsn_master:EXPERIENCE_RATING_MOD_FACTOR      = ""
+        gsn_master:RATE_DEPARTURE_LCM                = "999"
+        gsn_master:IND_RISK_PREMIUM_MOD_FACTOR_IRPM  = ""
+        gsn_master:EXPENSE_MOD_PREMIUM_DIS_FACTOR    = ""
+        gsn_master:PACKAGE_MOD_FACTOR                = ""
+        gsn_master:AGREED_AMOUNT_MODIFIER            = ""
+        gsn_master:TERRITORY_MODIFIER                = ""
+        gsn_master:PRIOR_ACTS_FACTOR                 = ""
+        gsn_master:UNITS_DISCOUNT_FACTOR             = ""
+        gsn_master:DEFENSE_IN_OR_OUT_OF_LIMIT_DOL    = ""
+        gsn_master:FIRST_DOLLAR_MODIFIER             = ""
+        gsn_master:COVERAGE_EXPOSURE                 = l_exposure
+        gsn_master:line_of_business                  = l_line_of_business
+        gsn_master:AGENCY_COMMISSION                 = 25.00
+        gsn_master:attachment_point                  = 52
+        gsn_master:iso_subline_code                  = str(sfsline2:ISO_SUBLINE)
+        gsn_master:trans_date                        = sfpmaster:PREMIUM_TRANS_DATE
+        do check_prior_policy_no
+        gsn_master:prior_policy_number               = l_prior_policy_number          --check_prior_policy_no()
+        gsn_master:prior_policy_number_eff_date      = l_prior_policy_eff_date     --get_previous_pol_eff_date()
+        gsn_master:prior_policy_number_prefix        = l_prior_policy_number_prefix
+        gsn_master:res_condo                         = l_res_condo
+        gsn_master:annual_premium                    = l_annual_premium
+        gsn_master:vehicle_age                       = ""
+        gsn_master:value_per_rating_unit_code        = ""
+        gsn_master:zone_rating_code                  = ""
+        gsn_master:original_cost_new                 = ""
+        gsn_master:iso_pip_deductible_code           = ""
+        gsn_master:iso_pip_rating_basis              = ""
+        gsn_master:iso_pip_limit_code                = ""
+        gsn_master:ISO_ANTI_THEFT_DEVICE_CODE        = ""
+        gsn_master:ISO_Garage_Agg_Lmt_Ind_Code       = ""
+        gsn_master:number_of_atm                     = ""
+        gsn_master:ISO_eCommerce_Hazard_Grp_Ind      = ""
+        gsn_master:iso_policy_limits_code            = l_iso_policy_limit_code
+        gsn_master:loss_cost_multiplier              = "1"
+        gsn_master:iso_endorsement_id_code           = "N/A"
+        gsn_master:COVERAGE_RETROACTIVE_DATE         = 01.01.1900
+        gsn_master:exposure_base                     = "N/A"
+        gsn_master:iso_cf_year_of_construction       = "N/A"
+        gsn_master:iso_bop_year_of_construction      = "N/A"
+     }
+END
+
+procedure check_prior_policy_no
+
+BEGIN
+  local file sfpname_prior_term = alias for sfpname;
+  local file sfpname_current_term = alias for sfpname;
+  local file sfpname_previous_policy_term = alias for sfpname;
+
+  unsigned ascii number l_prior_year[4],
+                        l_prior_end_sequence[4] = 0,
+                        l_current_end_sequence[4] = 0;
+
+  l_prior_policy_number_prefix = ""
+
+  l_prior_year = sfpname:pol_year - 1
+
+  access sfpname_current_term,
+     set sfpname_current_term:policy_no     = sfpname:policy_no ,
+         sfpname_current_term:pol_year      = sfpname:pol_year,
+         sfpname_current_term:end_sequence  = l_current_end_sequence, exact    --always look at endorsement 0 see if it is a 10 for later.
+
+  access sfpname_prior_term,
+     set sfpname_prior_term:policy_no     = sfpname:policy_no ,
+         sfpname_prior_term:pol_year      = l_prior_year,
+         sfpname_prior_term:end_sequence  = l_prior_end_sequence, exact
+
+  access sfpname_previous_policy_term,
+     set sfpname_previous_policy_term:policy_no     = sfpname:previous_policy_no ,
+         sfpname_previous_policy_term:pol_year      = l_prior_year,
+         sfpname_previous_policy_term:end_sequence  = l_prior_end_sequence, exact
+
+  if sfpname_current_term:trans_code one of 10 then
+    {
+      l_prior_policy_number   = 0
+      l_prior_policy_eff_date = 01.01.1900
+    }
+  else
+    if sfpname_prior_term:policy_no     = sfpname:policy_no and
+       sfpname_prior_term:pol_year      = l_prior_year and
+       sfpname_prior_term:end_sequence  = l_prior_end_sequence then  --means found a prior term of the policy so assign the policy number
+      {
+        l_prior_policy_number        = sfpname:policy_no
+        l_prior_policy_eff_date      = sfpname_prior_term:eff_date
+        l_prior_policy_number_prefix = sfsline:alpha
+      }
+    else  --lets try looking it up by the prior policy number
+      if sfpname_previous_policy_term:policy_no     = sfpname:previous_policy_no and
+         sfpname_previous_policy_term:pol_year      = l_prior_year and
+         sfpname_previous_policy_term:end_sequence  = l_prior_end_sequence then  --found the previous policy number as a policy in the system.
+        {
+          access sfsline_alias,
+             set sfsline_alias:Company_id       = sfpname_previous_policy_term:company_id,
+                 sfsline_alias:line_of_business = sfpname_previous_policy_term:line_of_business,
+                 sfsline_alias:lob_subline      = "00" , exact
+
+          l_prior_policy_number        = sfpname:previous_policy_no
+          l_prior_policy_eff_date      = sfpname_previous_policy_term:eff_date
+          l_prior_policy_number_prefix = sfsline_alias:alpha
+        }
+      else
+        {
+          l_prior_policy_number   = 0   --default it to current policy
+          l_prior_policy_eff_date = 01.01.1900
+        }
+--  return l_prior_policy_number
+END
+
+wdate function get_previous_pol_eff_date()
+
+BEGIN
+  local file sfpname_previous_policy = alias for sfpname;
+  local file sfpname_current_term = alias for sfpname;
+--  wdate l_prior_policy_eff_date;
+  unsigned ascii number l_prior_year[4];
+  unsigned ascii number l_prior_end_sequence[4] = 0;
+  unsigned ascii number l_current_term_end_sequence[4] = 0;
+
+  access sfpcurrent,
+     set sfpcurrent:policy_no    = sfpname:previous_policy_no, exact
+
+  if sfpname:previous_policy_no <> 0 then
+    {
+      l_prior_year         = sfpcurrent:pol_year - 1
+
+      access sfpname_previous_policy,
+         set sfpname_previous_policy:policy_no     = sfppoint:policy_no ,
+             sfpname_previous_policy:pol_year      = l_prior_year,
+             sfpname_previous_policy:end_sequence  = l_prior_end_sequence, exact
+
+      if sfpname_previous_policy:policy_no     = sfppoint:policy_no and
+         sfpname_previous_policy:pol_year      = l_prior_year  and
+         sfpname_previous_policy:end_sequence  = l_prior_end_sequence then
+        {
+          l_prior_policy_eff_date = sfpname_previous_policy:eff_date
+        }
+      else
+        {
+          l_prior_policy_eff_date = 01.01.1900
+        }
+    }
+  else
+    if sfpname:previous_policy_no = 0 then
+      {
+        access sfpname_current_term,
+           set sfpname_current_term:policy_no     = sfpname:policy_no ,
+               sfpname_current_term:pol_year      = sfpname:pol_year,
+               sfpname_current_term:end_sequence  = l_current_term_end_sequence, exact
+
+        if sfpname_current_term:policy_no    = sfpname:policy_no and
+           sfpname_current_term:pol_year     = sfpname:pol_year and
+           sfpname_current_term:end_sequence = l_current_term_end_sequence then
+          {
+            if sfpname_current_term:trans_code one of 10 then
+              {
+                l_prior_policy_eff_date = 01.01.1900
+              }
+            else
+              {
+                l_prior_policy_eff_date = sfpname_current_term:eff_date
+              }
+          }
+      }
+  if l_prior_policy_eff_date <= 01.25.2016 then  --gang started with gsn 09/01/2011 so I have to go one year after that to find prior valid policies
+    {
+      l_prior_policy_eff_date = 01.01.1900
+    }
+  return l_prior_policy_eff_date
+END
+
+End

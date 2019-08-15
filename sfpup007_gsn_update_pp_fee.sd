@@ -1,0 +1,159 @@
+%%                                  
+/*
+Date Written: 12/29/2015
+
+Name: sfpup007_gsn_update_pp_fee.sd
+
+Copyright (c) 2015, SCIPS.com Inc.
+
+Modify
+Date                   By                  Comment
+--------------------------------------------------------------
+12/29/2015            DLP                 This program is for the interface with gsn.  i
+                                          Update Payment plan and premium fees.
+==============================================================
+*/
+
+Program
+  Name = "sfpup007_gsn_update_pp_fee";
+  Type = "File";
+  Domain = "dummy";
+  Padcharacter = Space;
+
+  wdate l_starting_date,
+        l_ending_date;
+
+  signed ascii number l_prem_fee[9]=0.00/decimals=2;
+
+  unsigned ascii number l_payment_plan[4]=0/decimals=0,
+                        l_policy_no[9]=0/decimals=0,
+                        l_hold_policy_no[9]=0/decimals=0,
+                        l_hold_pol_year[4]=0/decimals=0,
+                        l_hold_end_sequence[4]=0/decimals=0;
+
+  string l_company_id[10]="GGUND     ",
+         l_first_pass[1]="Y",
+         l_enter[1];
+
+initialization
+  l_STARTING_DATE = Date(COMMANDLINE[1,8])
+  l_ENDING_DATE   = Date(COMMANDLINE[9,16])
+  l_hold_policy_no = 0
+  l_hold_pol_year = 0
+  l_hold_end_sequence = 0
+  write("<014>")
+
+  do process_scips_premium_file
+
+update
+
+procedure definition
+
+procedure process_scips_premium_file
+{
+
+l_policy_no         = 0
+l_hold_policy_no    = 0
+l_hold_pol_year     = 0
+l_hold_end_sequence = 0
+l_prem_fee          = 0
+l_payment_plan      = 0
+l_first_pass        = "Y"
+
+access gsn_master, set gsn_master:policy_no = l_policy_no, approximate
+
+while gsn_master:errornumber = 0
+{
+  if l_hold_policy_no <> gsn_master:policy_no then -- first pass will always be 0
+  {
+     l_hold_policy_no = gsn_master:policy_no
+     l_prem_fee       = 0
+     l_payment_plan   = 0
+     l_first_pass     = "Y"
+  }
+
+/*
+write ("<014>")
+write ("%c%s%n",01001,"Hold Policy Number        = ",l_hold_policy_no)
+write ("%c%s%n",03001,"Policy Number             = ",gsn_master:policy_no)
+write ("%c%s%s",05001,"First Pass                = ",l_first_pass)
+read (23,1,"Press Enter - line 78 ",l_enter,1)
+*/
+
+--  if l_first_pass = "Y" then -- get the Payment plan and fee on the first hit of the new policy number
+  {
+  --  l_first_pass = "N"
+
+    l_company_id = "GGUND     "
+    access prsmaster, set prsmaster:company_id  = l_company_id,
+                          prsmaster:policy_no   = l_hold_policy_no, approximate
+
+    while prsmaster:company_id = l_company_id and
+          prsmaster:policy_no  = l_hold_policy_no
+    {
+      if ((prsmaster:trans_date => l_starting_date and
+           prsmaster:trans_date <= l_ending_date and
+           prsmaster:trans_eff  <= l_ending_date) or
+          (prsmaster:trans_date <  l_starting_date and
+           prsmaster:trans_eff  => l_starting_date and
+           prsmaster:trans_eff  <= l_ending_date)) and
+           prsmaster:trans_code one of 19,22,23 then
+           {
+             if l_first_Pass = "Y" then
+               {
+                 l_prem_fee = l_prem_fee + prsmaster:premium
+               }
+           }
+
+      if ((prsmaster:trans_date => l_starting_date and
+           prsmaster:trans_date <= l_ending_date and
+           prsmaster:trans_eff  <= l_ending_date) or
+          (prsmaster:trans_date <  l_starting_date and
+           prsmaster:trans_eff  => l_starting_date and
+           prsmaster:trans_eff  <= l_ending_date)) and
+           prsmaster:trans_code < 17 then
+           {
+             if prsmaster:payment_plan <> 0 then
+               {
+                 l_payment_plan = prsmaster:payment_plan
+               }
+           }
+    next prsmaster
+    }
+    -- now update the gsn master file
+    if l_prem_fee <> 0 then
+       {
+          access gsn_master_alt, set gsn_master_alt:policy_no        = gsn_master:policy_no,
+                                      gsn_master_alt:pol_year         = gsn_master:pol_year,
+                                      gsn_master_alt:end_sequence     = gsn_master:end_sequence,
+                                      gsn_master_alt:prem_no          = gsn_master:prem_no,
+                                      gsn_master_alt:build_no         = gsn_master:build_no,
+                                      gsn_master_alt:line_of_business = gsn_master:line_of_business,
+                                      gsn_master_alt:lob_subline      = gsn_master:lob_subline,
+                                      gsn_master_alt:line_type        = gsn_master:line_type,
+                                      gsn_master_alt:sub_code         = gsn_master:sub_code, exact
+
+          if gsn_master_alt:errornumber = 0 then --
+          {
+            change gsn_master_alt
+            {
+--write ("<014>")
+--write ("%c%s%n",01001,"Hold Policy Number        = ",l_hold_policy_no)
+--write ("%c%s%n",03001,"Policy Number             = ",gsn_master:policy_no)
+--write ("%c%s%s",05001,"First Pass                = ",l_first_pass)
+--read (23,1,"Press Enter - line 129 ",l_enter,1)
+
+               gsn_master_alt:tsf          = l_prem_fee
+               l_prem_fee = 0
+--               l_payment_plan = 0
+               l_first_pass = "N"
+            }
+          }
+        }
+      }  -- end of first pass checking
+  next gsn_master
+  }  -- end of while for gsn_master
+
+} -- end of procedure
+
+END
