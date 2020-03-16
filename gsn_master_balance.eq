@@ -37,6 +37,7 @@ gsn_master_balance:policy_no
 gsn_master_balance:line_of_business 
 gsn_master_balance:lob_subline 
 gsn_master_balance:pol_year 
+
 --sfslinea_heading:description 
 sfslinea:description 
 sfslinea:line_type 

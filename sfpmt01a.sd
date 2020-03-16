@@ -5,7 +5,7 @@ Screen
         Padcharacter = Space ;
         Highlight = Underscore ;
         Screensize = "dynamic" ;
-        Windowtitle = "%a     %s Policy Processing - Ver. 7.70      %m";
+        Windowtitle = "GSN - %a     %s Policy Processing - Ver. 7.70      %m";
         Domain = "SFPPOINT" ;
         iconline = 0 ;
 
@@ -596,7 +596,7 @@ screen at 2,1 to 15, 84
 Properties
         {
         LayoutType = Column
-        backgroundcolor = "yellow"
+        backgroundcolor = "#99b3ff"
         }
 {
 Panel Tagged Header_pl

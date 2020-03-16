@@ -70,7 +70,8 @@ Program
                          l_misc[1] ,  --this is for misc premium
                          l_do_terrorism_only_once[1],
                          l_terrorism_only_once[1],
-                         l_payment_plan[4];
+                         l_payment_plan[4],
+                         l_sub[2];
 
   signed ascii number l_premium[9],
                       l_irpm_num[5]/decimals=2,
@@ -89,7 +90,8 @@ Program
                       l_save_premium[9],
                       l_annual_premium[9],
                       l_current_total_premium[9],
-                      l_short_rate[4]=0/dec=2;
+                      l_short_rate[4]=0/dec=2,
+                      l_exposure99[9]=0;
 
   STRING L_POLICY_INDICATOR[20],
          l_iso_fire_protection_code_bop[3],
@@ -2277,6 +2279,14 @@ BEGIN
         gsn_master:FIRST_DOLLAR_MODIFIER             = ""
 
         gsn_master:COVERAGE_EXPOSURE                 = l_exposure
+        
+        -- 03/16/2020 changes
+        l_exposure99 = 0
+        for l_sub = 1 to 10
+        {
+        l_exposure99 = l_exposure99 + l_limit[l_sub]
+        }
+        gsn_master:coverage_exposure = str(l_exposure99) 
 
         gsn_master:line_of_business                  = l_line_of_business
         gsn_master:AGENCY_COMMISSION                 = 25
