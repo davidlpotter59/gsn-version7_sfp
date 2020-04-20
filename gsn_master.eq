@@ -73,7 +73,7 @@ where gsn_master:premium <> 0 and  -- was 0
  --  and with policy_no one of 572
 --and with policy_no one of 4583000024, 120001053
 --and gsn_master:limit[24] <> 0
---and gsn_master:policy_no one of 609000001
+--and gsn_master:line_of_business one of 5,50,51
 list 
 /nobanner
 /domain="gsn_master" 

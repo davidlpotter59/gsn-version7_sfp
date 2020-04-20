@@ -156,7 +156,7 @@ initialization
   l_hold_end_sequence = 0
   write("<014>")
   access sfplocation,
-     set sfplocation:policy_no  = 0, approximate    --sets the file to beginning of the file.
+     set sfplocation:policy_no  = "", approximate    --sets the file to beginning of the file.
 
   access sfpname,
      set sfpname:policy_no    = sfplocation:policy_no,
@@ -180,30 +180,13 @@ initialization
          gsn_master:build_no         = sfplocation:build_no,
          gsn_master:line_of_business = l_line_of_business, generic
 
-write("<014>")
---read (23,1,"process_scips_premium_file",l_enter,1)
--- this was successfully called
   do process_scips_premium_file
 
   access sfplocation,
-     set sfplocation:policy_no  = 0, approximate    --sets the file to beginning of the file.
+     set sfplocation:policy_no  = "", approximate    --sets the file to beginning of the file.
 
   while sfplocation:errornumber = 0
     {
-----write("<014>")
-----read (23,1,"Checking for specific policy numbers here",l_enter,1)
-
-/*
-if sfplocation:policy_no one of 700000370, 709000056, 709000057, 709000058, 700001697  then
-{
-   write ("<014>")
-   write ("%c%s%n",01001,"l_policy_no                     = ",l_policy_no)
-   write ("%c%s%s",02001,"sfppoint:converted              = ",sfppoint:converted)
-   write ("%c%s%n",03001,"sfpmaster:end_sequence          = ",sfpmaster:end_sequence)
-   write ("%c%s%n",04001,"sfppoint:end_sequence           = ",sfppoint:end_sequence)
-   read (23,1,"Press enter to continue ", l_enter, 1)
-}
-*/
       access sfpmaster,
          set sfpmaster:policy_no    = sfplocation:policy_no,
              sfpmaster:pol_year     = sfplocation:pol_year,
@@ -243,7 +226,7 @@ if sfplocation:policy_no one of 700000370, 709000056, 709000057, 709000058, 7000
                sfpmaster:pol_year     = sfplocation:pol_year and
                sfpmaster:end_sequence = sfplocation:end_sequence and
                sfpmaster:trans_code < 17 and
-               sfpname:eff_date >= 11.14.2018 then
+               sfpname:eff_date >= 11.20.2018 then
             {
               l_policy_no    = sfplocation:policy_no
               l_pol_year     = sfplocation:pol_year
@@ -251,20 +234,7 @@ if sfplocation:policy_no one of 700000370, 709000056, 709000057, 709000058, 7000
               l_build_no     = sfplocation:build_no
               l_prem_no      = sfplocation:prem_no
               l_payment_plan = sfpname:payment_plan 
-/*
-write("<014>")
-read (23,1,"Checking for specific policy numbers here",l_enter,1)
 
-if l_policy_no = 700000370 then
-{
-   write ("<014>")
-   write ("%c%s%n",01001,"l_policy_no                     = ",l_policy_no)
-   write ("%c%s%s",02001,"sfppoint:converted              = ",sfppoint:converted)
-   write ("%c%s%n",03001,"sfpmaster:end_sequence          = ",sfpmaster:end_sequence)
-   write ("%c%s%n",04001,"sfppoint:end_sequence           = ",sfppoint:end_sequence)
-   read (23,1,"Press enter to continue ", l_enter, 1)
-}
-*/
                if (sfppoint:converted one of "Y" or
                   (sfppoint:converted one of "N" and
                    sfpmaster:end_sequence < sfppoint:end_sequence)) then           --check to make sure the transaction was updated if not do not have it included.
@@ -295,16 +265,15 @@ if l_policy_no = 700000370 then
                          gsn_master:prem_no          = sfplocation:prem_no ,
                          gsn_master:build_no         = sfplocation:prem_no ,
                          gsn_master:line_of_business = l_line_of_business, generic
-/*
-                  write("<014>")
+
+/*                  write("<014>")
                   write("%c%n",1005,sfplocation:policy_no)
                   write("%c%n",1015,sfplocation:pol_year)
                   write("%c%n",1025,sfplocation:end_sequence)
                   write("%c%n",1035,gsn_master:prem_no)
                   write("%c%n",1045,gsn_master:build_no)
-                  write("%c%n",1045,gsn_master:line_of_business)
-                  read (23,1,"Press Enter",l_enter,1)
-*/
+                  write("%c%n",1045,gsn_master:line_of_business)*/
+
 
                   if gsn_master:policy_no        <> sfplocation:policy_no or
                      gsn_master:pol_year         <> sfplocation:pol_year or
@@ -315,7 +284,9 @@ if l_policy_no = 700000370 then
                     {
                       access sfscompany,
                          set sfscompany:company_id = l_company_id , exact
---                       Read (23,1,"Press Enter to Continue ",L_ENTER,1)
+                       write ("<014>")
+                       write ("%c%s%n",01001,"sfplocation:policy_no           = ",sfplocation:policy_no)
+                       Read (23,1,"Press Enter to Continue ",L_ENTER,1)
 
                       switch (sfsline:lob_code)
                         case "UMBRELLA"   :  begin
@@ -561,26 +532,11 @@ BEGIN
              prsmaster:end_sequence one of 0 then
             {
               do verify_prsmaster_end_sequence(prsmaster:policy_no,prsmaster:pol_year)
-/*
-              write("<014>")
-              write("%c%s%n",01001,"prsmaster:policy_no          = ",prsmaster:policy_no)
-              write("%c%s%n",02001,"prsmaster:pol_year           = ",prsmaster:pol_year)
-              write("%c%s%n",03001,"prsmaster:end_sequence       = ",prsmaster:end_sequence)
-              write("%c%s%n",04001,"prsmaster:trans_code         = ",prsmaster:trans_code)
-              write("%c%s%n",05001,"l_fix_prsmaster_end_sequence = ",l_fix_prsmaster_end_sequence)
-              read (23,1,"Press Enter ",l_enter,1)
-*/
+        --      write("%c<014>%x%x",1001,"sfpmaster_alias:policy_no",  sfpmaster_alias:policy_no)
+         --     write("%c%x%x",2001,"sfpmaster_alias:pol_year",        sfpmaster_alias:pol_year)
+         --     write("%c%x%x",3001,"sfpmaster_alias:end_sequence",    sfpmaster_alias:end_sequence)
+         --     write("%c%x%x",4001,"sfpmaster_alias:trans_code",      sfpmaster_alias:trans_code)
               if l_fix_prsmaster_end_sequence <> 0 then
--- added 04/20/2020 - it was using the old access.  the file needed to be accessed using the l_fix_prsmaster_end_sequence
-           access gsn_master_premium,
-             set gsn_master_premium:company_id       = prsmaster:company_id,
-                 gsn_master_premium:policy_no        = prsmaster:policy_no,
-                 gsn_master_premium:pol_year         = prsmaster:pol_year,
-                 gsn_master_premium:end_sequence     = l_fix_prsmaster_end_sequence,
-                 gsn_master_premium:line_of_business = prsmaster:line_of_business,
-                 gsn_master_premium:lob_subline      = prsmaster:lob_subline,
-                 gsn_master_premium:trans_date       = prsmaster:trans_date,
-                 gsn_master_premium:trans_code       = prsmaster:trans_code, exact
                 {
                   if gsn_master_premium:company_id       <> prsmaster:company_id or
                      gsn_master_premium:policy_no        <> prsmaster:policy_no or
@@ -604,7 +560,6 @@ BEGIN
                           gsn_master_premium:trans_eff        = prsmaster:trans_eff
                           gsn_master_premium:eff_date         = prsmaster:eff_date
                           gsn_master_premium:premium          = prsmaster:premium
-
                         end
                     }
                   else
@@ -1307,6 +1262,37 @@ BEGIN
           do write_difference_in_premium
         }
     }
+
+/*
+    access gsn_master, set gsn_master:policy_no           = l_policy_no, 
+                           gsn_master:pol_year            = l_pol_year, 
+                           gsn_master:end_sequence        = l_end_sequence, 
+                           gsn_master:prem_no             = l_prem_no,
+                           gsn_master:build_no            = l_build_no,   
+                           gsn_master:line_of_business    = l_line_of_business,
+                           gsn_master:lob_subline         = l_lob_subline, 
+                           gsn_master:line_type           = l_line_type, approximate
+
+    while gsn_master:errornumber = 0
+    {
+        l_sub_code = gsn_master:sub_code 
+        next gsn_master
+    }
+    l_sub_code = l_sub_code + 3
+*/
+
+    access gsn_master, set gsn_master:policy_no           = l_policy_no, 
+                           gsn_master:pol_year            = l_pol_year, 
+                           gsn_master:end_sequence        = l_end_sequence, 
+                           gsn_master:prem_no             = l_prem_no,
+                           gsn_master:build_no            = l_build_no,   
+                           gsn_master:line_of_business    = l_line_of_business,
+                           gsn_master:lob_subline         = l_lob_subline, 
+                           gsn_master:line_type           = l_line_type, 
+                           gsn_master:sub_code            = l_sub_code
+
+    if gsn_master:errornumber <> 0 then 
+    {
     add gsn_master
       begin
         gsn_master:POLICY_NO                         = l_policy_no
@@ -1390,7 +1376,7 @@ BEGIN
         gsn_master:SIC_CODE                          = l_iso_sic_code
         gsn_master:TYPE_OF_POLICY                    = str(l_type_of_policy)
         gsn_master:COMPANY_NAME                      = trun(sfscompany:name[1]) + " " + sfscompany:name[2]
-        gsn_master:COMPANY_CODE                      = "gsn"             --need claification from ani
+        gsn_master:COMPANY_CODE                      = "GSN"             --need claification from ani
         gsn_master:FAC_INDICATOR                     = L_FAC_INDICATOR
         gsn_master:SITE_ADDRESS                      = Trun(sfplocation:address) + trun(SFPLOCATION:ADDRESS1[1]) + " " + trun(SFPLOCATION:ADDRESS1[2]) + " " + TRUN(SFPLOCATION:ADDRESS1[3])
         gsn_master:SITE_CITY                         = SFPLOCATION:CITY
@@ -1556,7 +1542,7 @@ BEGIN
         gsn_master:iso_bop_year_of_construction      = "N/A"
      }
 END
-
+}
 procedure check_prior_policy_no
 
 BEGIN

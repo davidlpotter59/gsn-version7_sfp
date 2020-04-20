@@ -29,8 +29,8 @@ export PATH
 VCQ_DBPATH=$data_dir
 
 
-STARTINGDATE=11012018
-ENDINGDATE=11302018
+# STARTINGDATE=03012020
+# ENDINGDATE=03312020
 
 STARTINGDATE=$1
 ENDINGDATE=$2
@@ -51,14 +51,14 @@ echo "running make for gsn_master_compare"
 /software/shells/gsn_master.mk
 /software/shells/scp_add_class_to_iso.mk
 /software/shells/cp_add_class_to_iso.mk
-# /software/shells/isoterritorycodebop.mk
-# /software/shells/isoterr_lookup_bop.mk
+/software/shells/isoterritorycodebop.mk
+/software/shells/isoterr_lookup_bop.mk
 
 dcheck gsn_master
 # dcheck gsn_master_compare
-# dcheck gsn_master_premium 
+dcheck gsn_master_premium 
 echo gsn master recreated
-# read me
+read me
 cd $working_dir
 
 echo Check file size now
@@ -76,9 +76,13 @@ csbatch -copyright  sfpup007_premium_file $STARTINGDATE$ENDINGDATE
 csbatch -copyright  sfpup007_gsn_bop $STARTINGDATE$ENDINGDATE
 csbatch -copyright  sfpup007_gsn_auto $STARTINGDATE$ENDINGDATE
 csbatch -copyright  sfpup007_gsn_cpp $STARTINGDATE$ENDINGDATE
+echo Umbrella starts here
+read 
 csbatch -copyright  sfpup007_gsn_umbrella $STARTINGDATE$ENDINGDATE
+echo Umbrella ends here
+read 
 csbatch -copyright  sfpup007_gsn_contractor $STARTINGDATE$ENDINGDATE
-# csbatch -copyright  sfpup007_gsn_update_pp_fee $STARTINGDATE$ENDINGDATE
+csbatch -copyright  sfpup007_gsn_update_pp_fee $STARTINGDATE$ENDINGDATE
 
 cd /data/gsn_debug3
 DATE=`date +%Y%m%d`

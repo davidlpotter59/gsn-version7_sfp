@@ -34,3 +34,5 @@ mv sfpup007_gsn_update_pp_fee.sb /data/gsn_debug3/lib770_1a
 mv sfpup007_premium_file.sb /data/gsn_debug3/lib770_1a
 mv prsmaster_change_end_sequence.sb /data/gsn_debug3/lib770_1a
 mv balance_master.sb /data/gsn_debug3/lib770_1a
+
+read me

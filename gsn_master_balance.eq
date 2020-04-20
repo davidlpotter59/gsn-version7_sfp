@@ -21,7 +21,7 @@ define file gsn_mastera = access gsn_master, set gsn_master:policy_no= gsn_maste
 define signed ascii number l_difference = gsn_master_balance:prsmaster_premium - gsn_master_balance:gsn_master_premium
 
 where l_difference <> 0
---where gsn_master_balance:policy_no one of 6702, 14439, 17032, 600005170,
+--and gsn_master_balance:policy_no one of 700001704
 --         600005360, 600005418, 800001019
 list
 /nobanner
@@ -41,6 +41,7 @@ gsn_master_balance:pol_year
 --sfslinea_heading:description 
 sfslinea:description 
 sfslinea:line_type 
+sfpname:trans_date 
 sfpnamea:eff_date 
 sfpnamea:exp_date   
 gsn_master_balance:gsn_master_premium /heading="GSN-Master-Premium"/total 
