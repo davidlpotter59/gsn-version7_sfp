@@ -10,9 +10,13 @@ define file sfsline_alias = access sfsline,
                                    sfsline:line_of_business = gsn_master:line_of_business,
                                    sfsline:lob_subline      = "00", exact 
  
+define string l_sfs[3] = "SFS"
 
-define string l_company_id[10]="GGUND     "
-          
+define file sfsdefaulta = access sfsdefault, set sfsdefault:sfs_code= l_sfs 
+
+--define string l_company_id[10]="GGUND     "
+define string l_company_id = sfsdefaulta:company_id 
+        
 define string l_writing_company = "gsn"
 define string l_company_code = "3710"
 define file prsmastera = access prsmaster, set prsmaster:company_id = l_company_id, 
@@ -54,6 +58,9 @@ define file sfsline2a = access sfsline2, set sfsline2:company_id= sfslinea:compa
                                              sfsline2:line_of_business= sfslinea:line_of_business, 
                                              sfsline2:lob_subline= gsn_master:subline_code  
 
+define file sfsline_dave = access lob_code, set lob_code:line_of_business= gsn_master:line_of_business, 
+                                                lob_code:lob_subline= gsn_master:lob_subline 
+
 define string l_line = str(gsn_master:line_of_business) + trun(gsn_master:subline_code)
 
 define file sfsline_gsn = access line, set line:line_of_business= gsn_master:line_of_business, 
@@ -68,7 +75,9 @@ where gsn_master:premium <> 0 and  -- was 0
        gsn_master:trans_eff_date <= l_ending_date)) 
      and gsn_master:trans_date => 11.20.2018 and 
          gsn_master:trans_eff_date => 11.20.2018
- 
+ and with sfsline_dave:lob_code one of "BOILER"
+--and with sfslineab:lob_code one of "BOILER"
+
 --and with policy_no one of 2300
 --and with line_of_business one of 8
 --and with lob_subline one of "81"
@@ -84,7 +93,7 @@ list
 --/csvseparator= "|"
 /duplicates 
 /nototals 
-/xls=str(l_ending_date,"YYYYMMDD")+"_"+str(todaysdate,"YYYYMMDD")+"_gsn_MASTER"
+--/xls=str(l_ending_date,"YYYYMMDD")+"_"+str(todaysdate,"YYYYMMDD")+"_gsn_MASTER"
 --/maxrecords=100
 
 -- change requested 01/05/2015
@@ -139,7 +148,7 @@ trun(gsn_master:site_county)/heading="Risk_County"
 trun(gsn_master:sic_code)/heading="SIC_Code"
 trun(gsn_master:type_of_policy)/heading="Type_of_Policy"
 trun(gsn_master:territory_code_iso)/heading="Territories_Code"
-gsn_master:premium/heading="Premium" -- /total 
+gsn_master:premium/heading="Premium"  /total 
 val(gsn_master:property_deductible)/mask="ZZZZZ9"/heading="Property Deductible"
 gsn_master:limit[1]/heading="Limit 1"
 gsn_master:limit[2]/heading="Limit 2" 
@@ -240,5 +249,6 @@ l_line /heading="STMT_LOB"
 -- added May 28, 2020
 sfsline_gsn:stmt_lob/heading="NEW_STMT_LOB"
 --sfslineab:stmt_lob /heading="sfslinb-stmt"
+sfsline_dave:lob_code 
 
 sorted by gsn_master:policy_no policy_no

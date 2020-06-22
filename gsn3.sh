@@ -40,8 +40,6 @@ ENDINGDATE=$2
 echo "STARTINGDATE = " $STARTINGDATE
 echo "ENDINGDATE   = " $ENDINGDATE
 
-read me
-
 cd $data_dir
 
 echo "running make for gsn_master_premium"
@@ -58,7 +56,6 @@ dcheck gsn_master
 # dcheck gsn_master_compare
 dcheck gsn_master_premium 
 echo gsn master recreated
-read me
 cd $working_dir
 
 echo Check file size now
@@ -76,11 +73,7 @@ csbatch -copyright  sfpup007_premium_file $STARTINGDATE$ENDINGDATE
 csbatch -copyright  sfpup007_gsn_bop $STARTINGDATE$ENDINGDATE
 csbatch -copyright  sfpup007_gsn_auto $STARTINGDATE$ENDINGDATE
 csbatch -copyright  sfpup007_gsn_cpp $STARTINGDATE$ENDINGDATE
-echo Umbrella starts here
-read 
 csbatch -copyright  sfpup007_gsn_umbrella $STARTINGDATE$ENDINGDATE
-echo Umbrella ends here
-read 
 csbatch -copyright  sfpup007_gsn_contractor $STARTINGDATE$ENDINGDATE
 csbatch -copyright  sfpup007_gsn_update_pp_fee $STARTINGDATE$ENDINGDATE
 
@@ -98,9 +91,9 @@ zip $NEWFILE gsn_master.*
 gsn_master_balance.mk
 
 cd /software/source/cvs_projects/davep/gsn/version7_sfp
-#cscomp -nowarn sfpup007_balance_premiums
-#csbatch sfpup007_balance_premiums $STARTINGDATE$ENDINGDATE
-#cscomp balance_master
+cscomp -nowarn sfpup007_balance_premiums
+csbatch sfpup007_balance_premiums $STARTINGDATE$ENDINGDATE
+cscomp balance_master
 # csbatch balance_master  $STARTINGDATE$ENDINGDATE
-/software/source/cvs_projects/davep/gsn/version7_sfp/gsn_balance.sh $STARTINGDATE $ENDINGDATE
+gsn_balance.sh $STARTINGDATE $ENDINGDATE
 

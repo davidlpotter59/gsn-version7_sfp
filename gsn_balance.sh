@@ -9,14 +9,12 @@
 # multiple runs do not unzip any files.  that would just wipe out
 # any updates that were done to the gsn_master file
 
-STARTINGDATE=02012019
-ENDINGDATE=02282019
-
 STARTINGDATE=$1
 ENDINGDATE=$2
 
 echo $STARTINGDATE
 echo $ENDINGDATE
+echo Balance GSN BDX
 read me
 
 
@@ -27,7 +25,8 @@ cd /data/gsn_debug3
 dcheck gsn_master_balance
 read me 
 
-cd /software/source/cvs_projects/davep/gsn/version7_sfp
+. sfp gsn
+# cd /software/source/cvs_projects/davep/gsn/version7_sfp
 cscomp -nowarn balance_master
 
 cqcsfind prsmaster.dat

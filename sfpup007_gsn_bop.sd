@@ -209,6 +209,27 @@ initialization
 
 --read (23,1,"Press enter - line 207 ",l_enter,1)
 
+if sfplocation:policy_no one of 25228 then 
+{
+  write ("<014>")
+  write ("%c%s%n",01001,"sfplocation:policy_no         =  ",sfplocation:policy_no)
+  write ("%c%s%n",02001,"sfplocation:pol_year          =  ",sfplocation:pol_year)
+  write ("%c%s%n",03001,"sfplocation:end_sequence      =  ",sfplocation:end_sequence)
+  write ("%c%s%n",04001,"sfplocation:build_no          =  ",sfplocation:build_no)
+  write ("%c%s%n",05001,"sfplocation:prem_no           =  ",sfplocation:prem_no)
+  write ("%c%s%n",06001,"sfpmaster:irpm                =  ",sfpmaster:irpm)
+  write ("%c%s%n",07001,"sfpname:payment_plan          =  ",sfpname:payment_plan)
+  write ("%c%s%d",09001,"sfpname:eff_date              =  ",sfpname:eff_date)
+  write ("%c%s%d",10001,"sfpmaster:premium_trans_date  =  ",sfpmaster:premium_trans_date)
+  write ("%c%s%n",11001,"sfpmaster:trans_code          =  ",sfpmaster:trans_code)
+  write ("%c%s%d",12001,"sfpmaster:trans_eff           =  ",sfpmaster:trans_eff)
+  write ("%c%s%n",13001,"sfpmaster:policy_no           =  ",sfpmaster:policy_no)
+  write ("%c%s%n",14001,"sfpmaster:pol_year            =  ",sfpmaster:pol_year)
+  write ("%c%s%n",15001,"sfpmaster:end_sequence        =  ",sfpmaster:end_sequence)
+  write ("%c%s%n",16001,"sfpname:line_of_business      =  ",sfpname:line_of_business)
+  read (23,1,"Press enter to continue ",l_enter,1)
+}
+
       If ((sfpmaster:PREMIUM_TRANS_DATE < l_starting_date and
            sfpmaster:trans_eff => l_starting_date and
            sfpmaster:trans_eff <= l_ending_date) or
@@ -227,17 +248,12 @@ initialization
            sfpmaster:trans_code   < 17 and
            sfpname:eff_date >= 11.20.2018 then
         {
-write ("<014>")
-write ("%c%s%n",01001,"sfplocation:policy_no      =  ",sfplocation:policy_no)
-write ("%c%s%n",02001,"sfplocation:pol_year       =  ",sfplocation:pol_year)
-write ("%c%s%n",03001,"sfplocation:end_sequence   =  ",sfplocation:end_sequence)
-write ("%c%s%n",04001,"sfplocation:build_no       =  ",sfplocation:build_no)
-write ("%c%s%n",05001,"sfplocation:prem_no        =  ",sfplocation:prem_no)
-write ("%c%s%n",06001,"sfpmaster:irpm             =  ",sfpmaster:irpm)
-write ("%c%s%n",07001,"sfpname:payment_plan       =  ",sfpname:payment_plan)
-write ("%c%s%d",09001,"sfpname:eff_date           =  ",sfpname:eff_date)
-write ("%c%s%n",10001,"sfpmaster:trans_code       =  ",sfpmaster:trans_code)
--- read (23,1,"Press enter to continue ",l_enter,1)
+
+if sfplocation:policy_no one of 25228 then 
+{
+  write ("<014>")
+  read (23,1,"After the check - Press enter to continue ",l_enter,1)
+}
 
           l_policy_no    = sfplocation:policy_no
           l_pol_year     = sfplocation:pol_year

@@ -1,0 +1,17 @@
+include "startend.inc"
+
+include "prscollect.inc"
+and with prsmaster:trans_code < 17
+and with prsmaster:policy_no one of 500003572
+
+list
+/nobanner
+/domain="prsmaster"
+/nodetail 
+
+prsmaster:line_of_business 
+prsmaster:lob_subline 
+sfsline:description 
+prsmaster:premium 
+
+sorted by prsmaster:policy_no

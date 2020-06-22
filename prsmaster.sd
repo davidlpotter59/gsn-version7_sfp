@@ -1,0 +1,107 @@
+Cyberscreen System                                     Function [____________]
+Screen 1. PRSMASTER Update Screen
+ 1. Company Id:          __________ 19. Coverage Limit:            __________
+ 2. Policy Number:       _________  20. Ann Premium:              ___________
+ 3. Sub Code:                 ____  21. Premium:                _____________
+
+
+ 5. Line Of Business:         ____ 22. Transaction Date:       __________
+ 6. Line Prefix:                __ 23. Transaction Effective:  __________
+ 7. Line:                       __ 24. Trans Eff Mm:                      __
+ 8. Agent Number:             ____ 25. Trans Eff Dd:                      __
+ 9. Lob Subline:         __        26. Trans Eff Yyyy:                  ____
+10. Policy Form:                 _ 27. Transaction Expiration: __________
+11. Billing Plan:        __        28. Effective Date:         __________
+12. Payment Plan:             ____ 29. Eff Date Mm:                       __
+13. Transaction Code:         ____ 30. Eff Date Dd:                       __
+14. Pol Year                  ____ 31. Eff Date Yyyy:                   ____
+15. End Sequence              ____ 32. Expiration Date:        __________
+16. Trans Code Type:             _ 33. Misc:                   __________
+17. Reins Co:               ______ 34. State Code:                        __
+18. Comm Rate:               _____ 35. County:                           ___
+%%
+Screen
+        Name = "Prsmaster" ;
+        Type = "Detail" ;
+
+        Global String G_COMPANY_ID[10] ;
+        Global Unsigned Ascii Number G_POLICY_NO[9] ;
+        Global Unsigned Ascii Number G_SUB_CODE[4] ;
+
+        Access PRSMASTER,
+           Set PRSMASTER:COMPANY_ID = G_COMPANY_ID ,
+               PRSMASTER:POLICY_NO = G_POLICY_NO ,
+               PRSMASTER:SUB_CODE = G_SUB_CODE ;
+
+           
+        Include "STDKEYS.INC"
+
+Functions
+        Add;            /* Add a record */
+        Change;         /* Change an existing record */
+        Delete;         /* Delete an existing record */
+
+        Find ;          /* Select a record using an exact key */
+        Search;         /* Select a record using an approximate key */
+        Next;           /* Display the next record(s) in key sequence */
+        Previous;       /* Display the previous record(s) in key sequence */
+        View;           /* View the contents of freetext fields */
+
+        Page/noreturn;  /* Display a different page - no going back */
+
+"Back"  Return;         /* Back to previous screen */
+"Exit"  Return;
+        Return;
+
+"Bye"   Stop;           /* Terminate this session */
+        Stop;
+
+        Print;          /* Print the screen on the default printer */
+"Cq"    Proc "CQ";      /* Enter Cyberquery */
+"Cli"   Proc ":CLI";    /* Push to the CLI */
+
+Fields
+        FUNCTION ;
+301     PRSMASTER:COMPANY_ID                    Mandatory;
+401     PRSMASTER:POLICY_NO                     Mandatory;
+501     PRSMASTER:SUB_CODE                      Mandatory;
+
+801     PRSMASTER:LINE_OF_BUSINESS;
+901     PRSMASTER:LINE_PREFIX;
+1001    PRSMASTER:LINE;
+1101    PRSMASTER:AGENT_NO;
+1201    PRSMASTER:LOB_SUBLINE;
+1301    PRSMASTER:FORM;
+1401    PRSMASTER:BILL_PLAN;
+1501    PRSMASTER:PAYMENT_PLAN;
+1601    PRSMASTER:TRANS_CODE;
+1701    PRSMASTER:pol_year;
+1801    PRSMASTER:end_sequence;
+1901    PRSMASTER:TRANS_CODE_TYPE;
+2001    PRSMASTER:REINS_CO;
+2101    PRSMASTER:COMM_RATE;
+302     PRSMASTER:LIMIT;
+402     PRSMASTER:ANN_PREMIUM;
+502     PRSMASTER:PREMIUM;
+802     PRSMASTER:TRANS_DATE;
+902     PRSMASTER:TRANS_EFF;
+1002    PRSMASTER:TRANS_EFF_MM;
+1102    PRSMASTER:TRANS_EFF_DD;
+1202    PRSMASTER:TRANS_EFF_YYYY;
+1302    PRSMASTER:TRANS_EXP;
+1402    PRSMASTER:EFF_DATE;
+1502    PRSMASTER:EFF_DATE_MM;
+1602    PRSMASTER:EFF_DATE_DD;
+1702    PRSMASTER:EFF_DATE_YYYY;
+1802    PRSMASTER:EXP_DATE;
+1902    PRSMASTER:MISC;
+2002    PRSMASTER:STATE;
+2102    PRSMASTER:COUNTY;
+
+Screen Exit
+        If PRSMASTER:COMPANY_ID > "" Then G_COMPANY_ID = PRSMASTER:COMPANY_ID ;
+        If PRSMASTER:POLICY_NO > 0 Then G_POLICY_NO = PRSMASTER:POLICY_NO ;
+        If PRSMASTER:SUB_CODE > 0 Then G_SUB_CODE = PRSMASTER:SUB_CODE ;
+
+
+End

@@ -2,4 +2,14 @@ clear list
 clear find
 clear sum
 
-run gsn_master.eq
+clear list
+clear find
+clear sum
+run /software/source/cvs_projects/davep/gsn/version7_sfp/sfsline_description_hold.eq
+run /software/source/cvs_projects/davep/gsn/version7_sfp/sfsline_hold.eq
+run /software/source/cvs_projects/davep/gsn/version7_sfp/sfsstmt_hold.eq
+run /software/source/cvs_projects/davep/gsn/version7_sfp/sfsline_hold_lob_code.eq
+
+
+run /software/source/cvs_projects/davep/gsn/version7_sfp/gsn_master.eq
+view

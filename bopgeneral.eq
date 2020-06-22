@@ -1,8 +1,6 @@
 viewpoint native;
 
-where bopgeneral:policy_no one of 77
-and bopgeneral:pol_year = 2020
-and bopgeneral:end_sequence = 0
+where bopgeneral:policy_no one of 500003572
 
 list/nobanner/domain="bopgeneral"
   bopgeneral:policy_no 

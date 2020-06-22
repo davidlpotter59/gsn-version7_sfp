@@ -1,0 +1,93 @@
+Cyberscreen System                                     Function [____________]
+Screen 1. SFPMASTER Update Screen
+ 1. Policy Number:              _________  19. Surcharge:        _________
+ 2. Policy Year:            ____           20. Form Of Business: _
+ 3. Endorsement Sequence:            ____
+
+
+ 5. Agent Comission:                _____
+ 6. Special Commission:             _____
+ 7. Split Comm:             _
+ 8. Package Deviation:              _____
+ 9. Irpm:                          ______
+10. Premium Transaction Date:       __________
+11. Transaction Effective:  __________
+12. Transaction Expiration: __________
+13. Quote No:                    ________
+14. Total:                  _____________
+15. Transaction Code:                ____
+16. Installment Charge:         _________
+17. Short Rate:             _
+18. Minimum Prem Applies:   _
+%%
+Screen
+        Name = "Sfpmaster" ;
+        Type = "Detail" ;
+
+        Global Unsigned Ascii Number G_POLICY_NO[9] ;
+        Global Unsigned Ascii Number G_POL_YEAR[4] ;
+        Global Unsigned Ascii Number G_END_SEQUENCE[4] ;
+
+        Access SFPMASTER,
+           Set SFPMASTER:POLICY_NO = G_POLICY_NO ,
+               SFPMASTER:POL_YEAR = G_POL_YEAR ,
+               SFPMASTER:END_SEQUENCE = G_END_SEQUENCE ;
+
+           
+        Include "STDKEYS.INC"
+
+Functions
+        Add;            /* Add a record */
+        Change;         /* Change an existing record */
+        Delete;         /* Delete an existing record */
+
+        Find ;          /* Select a record using an exact key */
+        Search;         /* Select a record using an approximate key */
+        Next;           /* Display the next record(s) in key sequence */
+        Previous;       /* Display the previous record(s) in key sequence */
+        View;           /* View the contents of freetext fields */
+
+        Page/noreturn;  /* Display a different page - no going back */
+
+"Back"  Return;         /* Back to previous screen */
+"Exit"  Return;
+        Return;
+
+"Bye"   Stop;           /* Terminate this session */
+        Stop;
+
+        Print;          /* Print the screen on the default printer */
+"Cq"    Proc "CQ";      /* Enter Cyberquery */
+"Cli"   Proc ":CLI";    /* Push to the CLI */
+
+Fields
+        FUNCTION ;
+301     SFPMASTER:POLICY_NO                     Mandatory;
+401     SFPMASTER:POL_YEAR                      Mandatory;
+501     SFPMASTER:END_SEQUENCE                  Mandatory;
+
+801     SFPMASTER:AGENT_COMM;
+901     SFPMASTER:SPECIAL_COMM;
+1001    SFPMASTER:SPLIT_COMM;
+1101    SFPMASTER:PACKAGE_DEVIATION;
+1201    SFPMASTER:IRPM;
+1301    SFPMASTER:premium_TRANS_DATE;
+1401    SFPMASTER:TRANS_EFF;
+1501    SFPMASTER:TRANS_EXP;
+1601    SFPMASTER:QUOTE_NO;
+1701    SFPMASTER:TOTAL[1];
+1801    SFPMASTER:TRANS_CODE;
+1901    SFPMASTER:INSTALLMENT_CHARGE;
+2001    SFPMASTER:SHORT_RATE;
+2101    SFPMASTER:MINIMUM_PREM_APPLIES;
+302     SFPMASTER:SURCHARGE;
+402     SFPMASTER:FORM_OF_BUSINESS;
+
+Screen Exit
+        If SFPMASTER:POLICY_NO > 0 Then G_POLICY_NO = SFPMASTER:POLICY_NO ;
+        If SFPMASTER:POL_YEAR > 0 Then G_POL_YEAR = SFPMASTER:POL_YEAR ;
+        If SFPMASTER:END_SEQUENCE > 0 
+        Then G_END_SEQUENCE = SFPMASTER:END_SEQUENCE ;
+
+
+End
