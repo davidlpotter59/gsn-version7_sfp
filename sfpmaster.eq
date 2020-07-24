@@ -2,7 +2,9 @@ viewpoint native;
 define file sfppointa = access sfppoint, set sfppoint:policy_no= sfpmaster:policy_no, 
                                              sfppoint:pol_year= sfpmaster:pol_year 
 
-where sfpmaster:policy_no one of 25228
+where sfpmaster:policy_no one of 20536
+
+
  and sfpmaster:pol_year one of 2019
 
 

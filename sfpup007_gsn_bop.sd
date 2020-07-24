@@ -209,7 +209,7 @@ initialization
 
 --read (23,1,"Press enter - line 207 ",l_enter,1)
 
-if sfplocation:policy_no one of 25228 then 
+if sfplocation:policy_no one of 20536 then 
 {
   write ("<014>")
   write ("%c%s%n",01001,"sfplocation:policy_no         =  ",sfplocation:policy_no)
@@ -227,7 +227,7 @@ if sfplocation:policy_no one of 25228 then
   write ("%c%s%n",14001,"sfpmaster:pol_year            =  ",sfpmaster:pol_year)
   write ("%c%s%n",15001,"sfpmaster:end_sequence        =  ",sfpmaster:end_sequence)
   write ("%c%s%n",16001,"sfpname:line_of_business      =  ",sfpname:line_of_business)
-  read (23,1,"Press enter to continue ",l_enter,1)
+ --  read (23,1,"Press enter to continue ",l_enter,1)
 }
 
       If ((sfpmaster:PREMIUM_TRANS_DATE < l_starting_date and
@@ -249,11 +249,12 @@ if sfplocation:policy_no one of 25228 then
            sfpname:eff_date >= 11.20.2018 then
         {
 
-if sfplocation:policy_no one of 25228 then 
+if sfplocation:policy_no one of 20536 then 
 {
   write ("<014>")
-  read (23,1,"After the check - Press enter to continue ",l_enter,1)
+  -- read (23,1,"After the check - Press enter to continue ",l_enter,1)
 }
+
 
           l_policy_no    = sfplocation:policy_no
           l_pol_year     = sfplocation:pol_year

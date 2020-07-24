@@ -1,0 +1,77 @@
+Cyberscreen System                                     Function [____________]
+Screen 1. SFPPOINT Update Screen
+
+
+
+ 1. Policy Number:        _________
+ 2. Policy Year:          ____
+ 3. Endorsement Sequence:      ____
+ 4. Converted:            _
+ 5. Suspense:                     _
+ 6. Prior Year 6 Months:          _
+ 7. Prior Pol Year:            ____
+ 8. Prior End Sequence:        ____
+ 9. Anniversary Record:           _
+10. Old Company:                  _
+
+
+
+
+%%
+Screen
+        Name = "Sfppoint" ;
+        Type = "Detail" ;
+
+        Global Unsigned Ascii Number G_POLICY_NO[9] ;
+        Global Unsigned Ascii Number G_POL_YEAR[4] ;
+
+        Access SFPPOINT,
+           Set SFPPOINT:POLICY_NO = G_POLICY_NO ,
+               SFPPOINT:POL_YEAR = G_POL_YEAR ;
+
+           
+        Include "STDKEYS.INC"
+
+Functions
+        Add;            /* Add a record */
+        Change;         /* Change an existing record */
+        Delete;         /* Delete an existing record */
+
+        Find ;          /* Select a record using an exact key */
+        Search;         /* Select a record using an approximate key */
+        Next;           /* Display the next record(s) in key sequence */
+        Previous;       /* Display the previous record(s) in key sequence */
+        View;           /* View the contents of freetext fields */
+
+        Page/noreturn;  /* Display a different page - no going back */
+
+"Back"  Return;         /* Back to previous screen */
+"Exit"  Return;
+        Return;
+
+"Bye"   Stop;           /* Terminate this session */
+        Stop;
+
+        Print;          /* Print the screen on the default printer */
+"Cq"    Proc "CQ";      /* Enter Cyberquery */
+"Cli"   Proc ":CLI";    /* Push to the CLI */
+
+Fields
+        FUNCTION ;
+601     SFPPOINT:POLICY_NO                      Mandatory;
+701     SFPPOINT:POL_YEAR                       Mandatory;
+801     SFPPOINT:END_SEQUENCE;
+901     SFPPOINT:CONVERTED;
+1001    SFPPOINT:SUSPENSE;
+1101    SFPPOINT:PRIOR_YEAR_6_MONTHS;
+1201    SFPPOINT:PRIOR_POL_YEAR;
+1301    SFPPOINT:PRIOR_END_SEQUENCE;
+1401    SFPPOINT:ANNIVERSARY_RECORD;
+1501    SFPPOINT:OLD_COMPANY;
+
+Screen Exit
+        If SFPPOINT:POLICY_NO > 0 Then G_POLICY_NO = SFPPOINT:POLICY_NO ;
+        If SFPPOINT:POL_YEAR > 0 Then G_POL_YEAR = SFPPOINT:POL_YEAR ;
+
+
+End

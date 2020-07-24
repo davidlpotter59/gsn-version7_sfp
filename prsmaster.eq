@@ -2,8 +2,7 @@ include "startend.inc"
 
 include "prscollect.inc"
 and with prsmaster:trans_code < 17
-and with prsmaster:policy_no one of 25228
-
+and with prsmaster:policy_no one of 13640, 20536
 
 list
 /nobanner
