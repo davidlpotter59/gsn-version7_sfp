@@ -2301,7 +2301,11 @@ BEGIN
         l_exposure99 = 0
         for l_sub = 1 to 10
         {
-        l_exposure99 = l_exposure99 + l_limit[l_sub]
+-- l_limit[6] = liability - per 07/23/2020 meeting do not include liability in the total exposure
+           if l_sub <> 6 then 
+           {
+             l_exposure99 = l_exposure99 + l_limit[l_sub]
+           }
         }
         gsn_master:coverage_exposure = str(l_exposure99) 
 

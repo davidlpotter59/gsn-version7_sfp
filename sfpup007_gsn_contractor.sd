@@ -1129,7 +1129,13 @@ BEGIN
                                                {
                                                  if scpendorse:code one of "MSC713D" then
                                                    {
-                                                     l_limit[10] = l_limit[10] + scpendorse:limit[1] + scpendorse:limit[2] + scpendorse:limit[3] + scpendorse:limit[4]+ scpendorse:limit[5] + scpendorse:limit[6] + scpendorse:limit[7]
+                                                     --l_limit[10] = l_limit[10] + scpendorse:limit[1] + scpendorse:limit[2] + scpendorse:limit[3] + scpendorse:limit[4]+ scpendorse:limit[5] + scpendorse:limit[6] + scpendorse:limit[7]
+
+-- per 07/23/2020 do not include liability to total exposure - limit[6] = liability
+                                                     l_limit[10] = l_limit[10] + scpendorse:limit[1] + 
+                                                                   scpendorse:limit[2] + scpendorse:limit[3] + 
+                                                                   scpendorse:limit[4]+ scpendorse:limit[5] + 
+                                                                   scpendorse:limit[7]
                                                      l_exposure = l_exposure + l_limit[10]
                                                    }
                                                  next scpendorse
